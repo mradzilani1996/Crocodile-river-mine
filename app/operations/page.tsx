@@ -31,14 +31,27 @@ export default function OperationsPage() {
   const [verifyNotes,setVerifyNotes]=useState<Record<string,string>>({});
   const [access,setAccess]=useState({person_name:"",company_number:"",employer:"",access_type:"entry",purpose:"",authorised_by:"",comments:""});
 
+  async function fetchAllTransactions() {
+    if (!supabase) return { data: [] as Row[], error: null as any };
+    const all: Row[] = []; const size = 1000;
+    for (let from = 0; ; from += size) {
+      const { data, error } = await supabase.from("ems_stock_transactions")
+        .select("product_id,transaction_type,status,quantity,unit_quantity,adjustment_direction,control_book_section")
+        .eq("status","posted").order("created_at",{ascending:true}).range(from,from+size-1);
+      if (error) return { data: all, error };
+      all.push(...(data||[])); if (!data || data.length < size) break;
+    }
+    return { data: all, error: null as any };
+  }
+
   async function load() {
     if(!supabase)return;
     const [h,s,a,p,t]=await Promise.all([
       supabase.from("ems_shift_handovers").select("*").order("created_at",{ascending:false}).limit(200),
       supabase.from("ems_stocktakes").select("*,ems_explosive_products(product_code,product_name,unit_of_measure)").order("count_date",{ascending:false}).limit(200),
       supabase.from("ems_magazine_access_log").select("*").order("access_time",{ascending:false}).limit(300),
-      supabase.from("ems_explosive_products").select("id,product_code,product_name,control_book_section,unit_of_measure,is_active").eq("is_active",true).order("product_name"),
-      supabase.from("ems_stock_transactions").select("product_id,transaction_type,status,quantity,adjustment_direction").eq("status","posted").limit(3000)
+      supabase.from("ems_explosive_products").select("id,product_code,product_name,control_book_section,unit_of_measure,is_active,approval_status").eq("is_active",true).eq("approval_status","approved").order("product_name"),
+      fetchAllTransactions()
     ]);
     const failure=h.error||s.error||a.error||p.error||t.error;
     if(failure)setError(failure.message);
@@ -52,19 +65,19 @@ export default function OperationsPage() {
   const canLog= ["admin","magazine_master","issuer"].includes(role);
   const canCountStock= ["admin","magazine_master"].includes(role);
   const canVerify=["admin","management"].includes(role);
-  const balances=products.map(p=>({product:p,balance:ledger.filter(t=>t.product_id===p.id).reduce((sum,t)=>{const q=Number(t.quantity||0);if(["receipt","return"].includes(t.transaction_type))return sum+q;if(t.transaction_type==="issue")return sum-q;return sum+(t.adjustment_direction==="increase"?q:-q);},0)}));
+  const balances=products.map(p=>({product:p,balance:ledger.filter(t=>t.product_id===p.id&&(!t.control_book_section||t.control_book_section===(p.control_book_section||""))).reduce((sum,t)=>{const q=Number(t.unit_quantity||t.quantity||0);if(["receipt","return"].includes(t.transaction_type))return sum+q;if(t.transaction_type==="issue")return sum-q;return sum+(t.adjustment_direction==="increase"?q:-q);},0)}));
 
   async function saveHandover(e:FormEvent){e.preventDefault();if(!supabase||!user||!profile)return;setBusy(true);setError("");setMessage("");
     const {error:e2}=await supabase.from("ems_shift_handovers").insert({...handover,handed_over_by:user.id,handed_over_by_name:profile.full_name});
     if(e2)setError(e2.message);else{setMessage("Shift handover recorded.");setHandover({handover_date:today,shift:"day",outgoing_person:"",incoming_person:"",stock_status:"checked",security_status:"satisfactory",seal_key_status:"intact",outstanding_matters:"",handover_notes:""});await load();}setBusy(false);
   }
-  async function saveCount(e:FormEvent){e.preventDefault();if(!supabase||!user||!profile||!canCountStock)return;const bal=balances.find(x=>x.product.id===count.product_id);if(!bal){setError("Select a registered product.");return;}setBusy(true);setError("");setMessage("");
-    const {error:e2}=await supabase.from("ems_stocktakes").insert({count_date:count.count_date,product_id:count.product_id,system_balance:bal.balance,physical_balance:Number(count.physical_balance),discrepancy_notes:count.discrepancy_notes||null,counted_by:user.id,counted_by_name:profile.full_name,control_book_section:bal.product.control_book_section});
-    if(e2)setError(e2.message);else{setMessage("Physical count saved for management verification. No stock balance was changed.");setCount({count_date:today,product_id:"",physical_balance:"",discrepancy_notes:""});await load();}setBusy(false);
+  async function saveCount(e:FormEvent){e.preventDefault();if(!supabase||!user||!profile||!canCountStock)return;const bal=balances.find(x=>x.product.id===count.product_id);if(!bal){setError("Select an approved product.");return;}setBusy(true);setError("");setMessage("");
+    const {error:e2}=await supabase.rpc("ems_submit_stocktake",{p_count_date:count.count_date,p_product_id:count.product_id,p_physical_balance:Number(count.physical_balance),p_discrepancy_notes:count.discrepancy_notes||null});
+    if(e2)setError(e2.message);else{setMessage("Stocktake submitted. The system balance is saved and stock will not change until Management approves any variance.");setCount({count_date:today,product_id:"",physical_balance:"",discrepancy_notes:""});await load();}setBusy(false);
   }
-  async function verify(row:Row,status:"verified"|"adjustment_required"){if(!supabase||!user||!profile||!canVerify)return;setBusy(true);setError("");setMessage("");
-    const {error:e2}=await supabase.from("ems_stocktakes").update({status,verified_by:user.id,verified_by_name:profile.full_name,verified_at:new Date().toISOString(),verification_notes:verifyNotes[row.id]||null}).eq("id",row.id).eq("status","pending_verification");
-    if(e2)setError(e2.message);else{setMessage("Stocktake review saved. Any stock correction must still be processed through the authorised transaction workflow.");await load();}setBusy(false);
+  async function verify(row:Row,decision:"approve"|"reject"){if(!supabase||!user||!profile||!canVerify)return;setBusy(true);setError("");setMessage("");
+    const {error:e2}=await supabase.rpc("ems_review_stocktake",{p_stocktake_id:row.id,p_decision:decision,p_notes:verifyNotes[row.id]||null});
+    if(e2)setError(e2.message);else{setMessage(decision==="approve"&&Number(row.variance)!==0?"Approved. The variance adjustment has been posted to the stock ledger.":"Stocktake review completed.");await load();}setBusy(false);
   }
   async function saveAccess(e:FormEvent){e.preventDefault();if(!supabase||!user||!profile)return;setBusy(true);setError("");setMessage("");
     const {error:e2}=await supabase.from("ems_magazine_access_log").insert({...access,logged_by:user.id,logged_by_name:profile.full_name});
@@ -91,12 +104,13 @@ export default function OperationsPage() {
       <section style={card}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap"}}><h2 style={{marginTop:0}}>Shift handover register</h2><button type="button" style={btn} onClick={()=>window.print()}>Print handovers</button></div>{handovers.length?handovers.map(r=><article key={r.id} style={{borderTop:"1px solid #e6eaf0",padding:"14px 0"}}><b>HANDOVER-{r.handover_number} · {r.handover_date} · {r.shift} shift</b><p style={{margin:"6px 0"}}>{r.outgoing_person} → {r.incoming_person}</p><small>Stock: {r.stock_status.replaceAll("_"," ")} · Security: {r.security_status.replaceAll("_"," ")} · Keys/seals: {r.seal_key_status.replaceAll("_"," ")} · Recorded by {r.handed_over_by_name}</small>{r.outstanding_matters&&<p><b>Outstanding:</b> {r.outstanding_matters}</p>}{r.handover_notes&&<p>{r.handover_notes}</p>}</article>):<p>No shift handovers recorded.</p>}</section></>}
     {tab==="stocktake"&&<><section style={card}><h2 style={{marginTop:0}}>Physical stock reconciliation</h2><p>Record the physical count against the posted system balance. A variance is sent for management verification; this form does not change inventory.</p>{canCountStock?<form onSubmit={saveCount} style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:14}}>
       <label style={field}>Count date<input type="date" style={input} value={count.count_date} onChange={e=>setCount({...count,count_date:e.target.value})} required/></label>
-      <label style={field}>Product<select style={input} value={count.product_id} onChange={e=>setCount({...count,product_id:e.target.value})} required><option value="">Select product</option>{balances.map(x=><option key={x.product.id} value={x.product.id}>{x.product.product_code} · {x.product.product_name}</option>)}</select></label>
+      <label style={field}>Product<select style={input} value={count.product_id} onChange={e=>setCount({...count,product_id:e.target.value})} required><option value="">Select product</option>{balances.map(x=><option key={x.product.id} value={x.product.id}>{x.product.control_book_section||"Register"} · {x.product.product_code} · {x.product.product_name}</option>)}</select></label>
       <label style={field}>System balance<input readOnly style={{...input,background:"#f2f4f7"}} value={balances.find(x=>x.product.id===count.product_id)?.balance??""}/></label>
-      <label style={field}>Physical balance<input type="number" min="0" step="0.001" style={input} value={count.physical_balance} onChange={e=>setCount({...count,physical_balance:e.target.value})} required/></label>
-      <label style={{...field,gridColumn:"1/-1"}}>Variance explanation / notes<textarea rows={2} style={input} value={count.discrepancy_notes} onChange={e=>setCount({...count,discrepancy_notes:e.target.value})}/></label>
+      <label style={field}>Physical balance (units)<input type="number" min="0" step="0.001" style={input} value={count.physical_balance} onChange={e=>setCount({...count,physical_balance:e.target.value})} required/></label>
+      <label style={field}>Variance<input readOnly style={{...input,background:"#f2f4f7"}} value={count.physical_balance!==""&&count.product_id?(Number(count.physical_balance)-(balances.find(x=>x.product.id===count.product_id)?.balance||0)).toLocaleString("en-ZA"): ""}/></label>
+      <label style={{...field,gridColumn:"1/-1"}}>Explain any shortage or overage<textarea rows={2} style={input} value={count.discrepancy_notes} onChange={e=>setCount({...count,discrepancy_notes:e.target.value})} placeholder="Required when the physical count differs from the system balance"/></label>
       <div><button style={btn} disabled={busy||!products.length}>{busy?"Saving…":"Submit count for verification"}</button></div></form>:<p>Your role can view reconciliations but cannot submit counts.</p>}</section>
-      <section style={card}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap"}}><h2 style={{marginTop:0}}>Stocktake register</h2><button type="button" style={btn} onClick={()=>window.print()}>Print stocktakes</button></div>{stocktakes.length?stocktakes.map(r=><article key={r.id} style={{borderTop:"1px solid #e6eaf0",padding:"14px 0"}}><div style={{display:"flex",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}><b>COUNT-{r.stocktake_number} · {r.control_book_section||"Register"} · {r.ems_explosive_products?.product_name||"Product"} · {r.count_date}</b><b>{r.status.replaceAll("_"," ")}</b></div><p>System: {Number(r.system_balance).toLocaleString("en-ZA")} · Physical: {Number(r.physical_balance).toLocaleString("en-ZA")} · Variance: {Number(r.variance).toLocaleString("en-ZA")}</p><small>Counted by {r.counted_by_name}{r.discrepancy_notes?" · "+r.discrepancy_notes:""}</small>{r.status==="pending_verification"&&canVerify&&<div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:10}}><input style={{...input,maxWidth:400}} placeholder="Verification notes" value={verifyNotes[r.id]||""} onChange={e=>setVerifyNotes({...verifyNotes,[r.id]:e.target.value})}/><button style={btn} disabled={busy} onClick={()=>verify(r,"verified")}>Verify count</button><button style={{...btn,background:"#8a3a28"}} disabled={busy} onClick={()=>verify(r,"adjustment_required")}>Adjustment required</button></div>}{r.verification_notes&&<p><b>Review:</b> {r.verification_notes}</p>}</article>):<p>No stocktake records.</p>}</section></>}
+      <section style={card}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap"}}><h2 style={{marginTop:0}}>Stocktake register</h2><button type="button" style={btn} onClick={()=>window.print()}>Print stocktakes</button></div>{stocktakes.length?stocktakes.map(r=><article key={r.id} style={{borderTop:"1px solid #e6eaf0",padding:"14px 0"}}><div style={{display:"flex",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}><b>COUNT-{r.stocktake_number} · {r.control_book_section||"Register"} · {r.ems_explosive_products?.product_name||"Product"} · {r.count_date}</b><b>{r.status.replaceAll("_"," ")}</b></div><p>System: {Number(r.system_balance).toLocaleString("en-ZA")} · Physical: {Number(r.physical_balance).toLocaleString("en-ZA")} · Variance: {Number(r.variance).toLocaleString("en-ZA")}</p><small>Counted by {r.counted_by_name}{r.discrepancy_notes?" · "+r.discrepancy_notes:""}</small>{r.status==="pending_verification"&&canVerify&&<div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:10}}><input style={{...input,maxWidth:400}} placeholder={Number(r.variance)!==0?"Management explanation (required)":"Review notes"} value={verifyNotes[r.id]||""} onChange={e=>setVerifyNotes({...verifyNotes,[r.id]:e.target.value})}/><button style={btn} disabled={busy} onClick={()=>verify(r,"approve")}>Approve count{Number(r.variance)!==0?" & post adjustment":""}</button><button style={{...btn,background:"#8a3a28"}} disabled={busy} onClick={()=>verify(r,"reject")}>Reject</button></div>}{r.verification_notes&&<p><b>Management review:</b> {r.verification_notes}</p>}{r.adjustment_transaction_id&&<p><b>Ledger adjustment:</b> {r.adjustment_transaction_id} · posted {r.adjustment_posted_at?new Date(r.adjustment_posted_at).toLocaleString("en-ZA"):""}</p>}{r.verified_by_name&&<small>Reviewed by {r.verified_by_name}{r.verified_at?" · "+new Date(r.verified_at).toLocaleString("en-ZA"):""}</small>}</article>):<p>No stocktake records.</p>}</section></>}
     {tab==="access"&&<><section style={card}><h2 style={{marginTop:0}}>Magazine access event</h2>{canLog?<form onSubmit={saveAccess} style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:14}}>
       <label style={field}>Person's full name<input required style={input} value={access.person_name} onChange={e=>setAccess({...access,person_name:e.target.value})}/></label>
       <label style={field}>Company / employee number<input style={input} value={access.company_number} onChange={e=>setAccess({...access,company_number:e.target.value})}/></label>
