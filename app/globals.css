@@ -172,3 +172,13 @@ td b{color:#193c24}
  .login-shell .features{grid-template-columns:1fr;gap:10px}
  .login-shell .features article{padding:15px}
 }
+
+
+/* Full-screen muted mining video behind the Crocodile River Mine sign-in */
+.login-shell{position:relative;isolation:isolate;overflow:hidden;background:#031d0e!important}
+.login-shell .login-video{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;background:#031d0e}
+.login-shell .login-video iframe{position:absolute;top:50%;left:50%;width:100vw;height:56.25vw;min-width:177.78vh;min-height:100vh;transform:translate(-50%,-50%);border:0;opacity:.78}
+.login-shell:before{z-index:1!important;pointer-events:none}
+.login-shell>.topbar,.login-shell>.hero,.login-shell>.features,.login-shell>footer{position:relative;z-index:2}
+@media(max-width:650px){.login-shell .login-video iframe{opacity:.55;min-width:220vh}}
+@media(prefers-reduced-motion:reduce){.login-shell .login-video{display:none}}
