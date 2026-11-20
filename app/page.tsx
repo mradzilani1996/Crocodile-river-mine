@@ -8,6 +8,8 @@ type Magazine = { magazine_name: string; responsible_user_id: string | null; is_
 type EMSProfile = { user_id: string; full_name: string; email: string; role: string; is_active: boolean };
 type Transaction = { id: string; transaction_number: number; transaction_type: string; status: string; quantity: number; transaction_date: string; reference_number: string | null };
 type Product = { id: string; product_code: string; product_name: string; unit_of_measure: string; minimum_stock: number; is_active: boolean };
+type DailyOrder = { id: string; order_number: number; order_date: string; shift: string; work_area: string; blast_site: string | null; requester_name: string; purpose: string; status: string; requested_by: string; approval_notes: string | null };
+type DailyOrderItem = { id: string; order_id: string; product_id: string; quantity_requested: number; quantity_approved: number | null; quantity_issued: number; notes: string | null };
 
 export default function Home() {
   const supabase = useMemo(() => {
@@ -33,6 +35,14 @@ export default function Home() {
   const [profiles, setProfiles] = useState<EMSProfile[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [dailyOrders, setDailyOrders] = useState<DailyOrder[]>([]);
+  const [dailyOrderItems, setDailyOrderItems] = useState<DailyOrderItem[]>([]);
+  const [orderDate, setOrderDate] = useState(new Date().toISOString().slice(0, 10));
+  const [orderShift, setOrderShift] = useState("day");
+  const [workArea, setWorkArea] = useState("");
+  const [blastSite, setBlastSite] = useState("");
+  const [orderPurpose, setOrderPurpose] = useState("");
+  const [draftOrderItems, setDraftOrderItems] = useState([{ product_id: "", quantity_requested: "", notes: "" }]);
   const [dataLoading, setDataLoading] = useState(false);
   const [authChecking, setAuthChecking] = useState(true);
 
@@ -51,17 +61,21 @@ export default function Home() {
   async function loadDashboard() {
     if (!supabase) return;
     setDataLoading(true); setError("");
-    const [mag, people, productRows, txRows] = await Promise.all([
+    const [mag, people, productRows, txRows, orderRows, orderItemRows] = await Promise.all([
       supabase.from("ems_magazine").select("magazine_name,responsible_user_id,is_active").eq("singleton", true).maybeSingle(),
       supabase.from("ems_profiles").select("user_id,full_name,email,role,is_active").order("full_name"),
       supabase.from("ems_explosive_products").select("id,product_code,product_name,unit_of_measure,minimum_stock,is_active").order("product_name"),
-      supabase.from("ems_stock_transactions").select("id,transaction_number,transaction_type,status,quantity,transaction_date,reference_number").order("transaction_date", { ascending: false }).limit(8)
+      supabase.from("ems_stock_transactions").select("id,transaction_number,transaction_type,status,quantity,transaction_date,reference_number").order("transaction_date", { ascending: false }).limit(8),
+      supabase.from("ems_daily_orders").select("id,order_number,order_date,shift,work_area,blast_site,requester_name,purpose,status,requested_by,approval_notes").order("created_at", { ascending: false }).limit(50),
+      supabase.from("ems_daily_order_items").select("id,order_id,product_id,quantity_requested,quantity_approved,quantity_issued,notes").order("created_at")
     ]);
     if (mag.error) setError("Could not load magazine details. Check the database permissions.");
     else if (mag.data) { setMagazine(mag.data as Magazine); setMagazineName(mag.data.magazine_name); setResponsibleUserId(mag.data.responsible_user_id || ""); }
     if (people.data) setProfiles(people.data as EMSProfile[]);
     if (productRows.data) setProducts(productRows.data as Product[]);
     if (txRows.data) setTransactions(txRows.data as Transaction[]);
+    if (orderRows.data) setDailyOrders(orderRows.data as DailyOrder[]);
+    if (orderItemRows.data) setDailyOrderItems(orderItemRows.data as DailyOrderItem[]);
     setDataLoading(false);
   }
 
@@ -132,10 +146,48 @@ export default function Home() {
     setBusy(false);
   }
 
+  async function submitDailyOrder(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!supabase || !user) return;
+    if (draftOrderItems.some(i => !i.product_id || !i.quantity_requested || Number(i.quantity_requested) <= 0)) {
+      setError("Choose a product and enter a quantity greater than zero for every order line."); return;
+    }
+    setBusy(true); setError(""); setNotice("");
+    const { error: submitError } = await supabase.rpc("ems_submit_daily_order", {
+      p_order_date: orderDate, p_shift: orderShift, p_work_area: workArea, p_blast_site: blastSite,
+      p_purpose: orderPurpose,
+      p_items: draftOrderItems.map(i => ({ product_id: i.product_id, quantity_requested: Number(i.quantity_requested), notes: i.notes }))
+    });
+    if (submitError) setError("Daily order could not be submitted: " + submitError.message);
+    else {
+      setNotice("Daily explosive order submitted for authorisation.");
+      setWorkArea(""); setBlastSite(""); setOrderPurpose("");
+      setDraftOrderItems([{ product_id: "", quantity_requested: "", notes: "" }]);
+      await loadDashboard();
+    }
+    setBusy(false);
+  }
+
+  async function updateDailyOrder(order: DailyOrder, action: "approve" | "reject" | "fulfil") {
+    if (!supabase || !user) return;
+    const patch = action === "approve"
+      ? { status: "approved", approved_by: user.id, approved_at: new Date().toISOString() }
+      : action === "reject"
+      ? { status: "rejected", approved_by: user.id, approved_at: new Date().toISOString(), approval_notes: "Rejected during authorisation review." }
+      : { status: "fulfilled", issued_by: user.id, issued_at: new Date().toISOString() };
+    setBusy(true); setError(""); setNotice("");
+    const { error: updateError } = await supabase.from("ems_daily_orders").update(patch).eq("id", order.id).eq("status", order.status);
+    if (updateError) setError("Order status could not be updated: " + updateError.message);
+    else { setNotice("Daily order status updated."); await loadDashboard(); }
+    setBusy(false);
+  }
+
   const activePeople = profiles.filter(p => p.is_active);
   const activeProducts = products.filter(p => p.is_active);
   const pending = transactions.filter(t => t.status === "pending_approval").length;
   const canManageMagazine = profile?.role === "admin";
+  const canApproveOrders = profile?.role === "admin" || profile?.role === "authorising_officer";
+  const canFulfilOrders = profile?.role === "admin" || profile?.role === "magazine_master" || profile?.role === "issuer";
   const roleName = (profile?.role || "").replaceAll("_", " ");
 
   if (authChecking) return <main className="shell login-shell"><div className="hero"><div className="eyebrow">CROCODILE RIVER MINE</div><h1>Explosives <em>Management</em></h1><p className="intro">Checking your secure EMS session…</p></div></main>;
@@ -196,10 +248,11 @@ export default function Home() {
         <button className={section === "people" ? "nav-item active" : "nav-item"} onClick={() => setSection("people")}>♙ <span>User profiles</span></button>
         <button className={section === "products" ? "nav-item active" : "nav-item"} onClick={() => setSection("products")}>▤ <span>Product register</span></button>
         <button className={section === "transactions" ? "nav-item active" : "nav-item"} onClick={() => setSection("transactions")}>⇄ <span>Stock records</span></button>
+        <button className={section === "daily-orders" ? "nav-item active" : "nav-item"} onClick={() => setSection("daily-orders")}>▧ <span>Daily order sheet</span></button>
         <div className="side-bottom"><div className="user-chip"><span className="avatar">{(profile?.full_name || "A").slice(0,1).toUpperCase()}</span><div><strong>{profile?.full_name || user?.email || "EMS user"}</strong><small>{roleName}</small></div></div><button className="signout" onClick={signOut}>Sign out ↗</button></div>
       </aside>
       <section className="main-area">
-        <header className="app-top"><div><span className="crumb">CROCODILE RIVER MINE / EMS</span><h1>{section === "overview" ? "Dashboard" : section === "magazine" ? "Magazine management" : section === "people" ? "User profiles" : section === "products" ? "Product register" : "Stock records"}</h1></div><div className="top-right"><span className="status-dot"></span> System online <button onClick={loadDashboard} className="refresh-btn">↻ Refresh</button></div></header>
+        <header className="app-top"><div><span className="crumb">CROCODILE RIVER MINE / EMS</span><h1>{section === "overview" ? "Dashboard" : section === "magazine" ? "Magazine management" : section === "people" ? "User profiles" : section === "products" ? "Product register" : section === "daily-orders" ? "Daily explosive order sheet" : "Stock records"}</h1></div><div className="top-right"><span className="status-dot"></span> System online <button onClick={loadDashboard} className="refresh-btn">↻ Refresh</button></div></header>
         <div className="content">
           {notice && <div className="notice success-notice">{notice}</div>}
           {error && <div className="notice error-notice">{error}</div>}
@@ -216,7 +269,7 @@ export default function Home() {
               <section className="data-card"><div className="card-heading"><div><h3>Recent stock records</h3><p>Latest recorded movements and their current status.</p></div><button className="text-action" onClick={() => setSection("transactions")}>View records →</button></div>
                 {transactions.length ? <div className="table-wrap"><table><thead><tr><th>REFERENCE</th><th>TYPE</th><th>DATE</th><th>STATUS</th></tr></thead><tbody>{transactions.map(t=><tr key={t.id}><td>EMS-{t.transaction_number}</td><td className="capitalize">{t.transaction_type}</td><td>{new Date(t.transaction_date).toLocaleDateString("en-ZA")}</td><td><span className={"state "+t.status}>{t.status.replaceAll("_"," ")}</span></td></tr>)}</tbody></table></div> : <div className="empty-state">No stock transactions have been recorded yet.</div>}
               </section>
-              <section className="data-card quick-card"><div className="card-heading"><div><h3>System shortcuts</h3><p>Manage core EMS setup.</p></div></div><button onClick={() => setSection("magazine")} className="shortcut">▣ <span><b>Magazine configuration</b><small>View the main magazine and responsible person</small></span> →</button><button onClick={() => setSection("people")} className="shortcut">♙ <span><b>User profiles</b><small>Review assigned roles and account status</small></span> →</button><button onClick={() => setSection("products")} className="shortcut">▤ <span><b>Product register</b><small>View registered product records</small></span> →</button></section>
+              <section className="data-card quick-card"><div className="card-heading"><div><h3>System shortcuts</h3><p>Manage core EMS setup.</p></div></div><button onClick={() => setSection("magazine")} className="shortcut">▣ <span><b>Magazine configuration</b><small>View the main magazine and responsible person</small></span> →</button><button onClick={() => setSection("people")} className="shortcut">♙ <span><b>User profiles</b><small>Review assigned roles and account status</small></span> →</button><button onClick={() => setSection("products")} className="shortcut">▤ <span><b>Product register</b><small>View registered product records</small></span> →</button><button onClick={() => setSection("daily-orders")} className="shortcut">▧ <span><b>Daily explosive order</b><small>Submit and track daily requirements</small></span> →</button></section>
             </div>
           </>}
           {section === "magazine" && <section className="data-card wide-card"><div className="card-heading"><div><h3>Main magazine configuration</h3><p>Maintain the system record and assign the responsible Magazine Master.</p></div><span className="state approved"> {magazine?.is_active ? "Active" : "Inactive"} </span></div>
@@ -224,6 +277,32 @@ export default function Home() {
           </section>}
           {section === "people" && <section className="data-card wide-card"><div className="card-heading"><div><h3>EMS user profiles</h3><p>Account access and assigned responsibilities.</p></div><span className="role-pill">{activePeople.length} active</span></div><div className="table-wrap"><table><thead><tr><th>NAME</th><th>EMAIL</th><th>ROLE</th><th>STATUS</th></tr></thead><tbody>{profiles.map(p=><tr key={p.user_id}><td><b>{p.full_name}</b></td><td>{p.email}</td><td className="capitalize">{p.role.replaceAll("_"," ")}</td><td><span className={"state "+(p.is_active ? "approved" : "rejected")}>{p.is_active ? "Active" : "Inactive"}</span></td></tr>)}</tbody></table></div><p className="table-footnote">User creation and role changes are reserved for the next user-management release.</p></section>}
           {section === "products" && <section className="data-card wide-card"><div className="card-heading"><div><h3>Explosive product register</h3><p>Configured product records and their minimum-stock reference values.</p></div><span className="role-pill">{activeProducts.length} active</span></div>{products.length ? <div className="table-wrap"><table><thead><tr><th>PRODUCT CODE</th><th>PRODUCT NAME</th><th>UNIT</th><th>MINIMUM STOCK</th><th>STATUS</th></tr></thead><tbody>{products.map(p=><tr key={p.id}><td>{p.product_code}</td><td><b>{p.product_name}</b></td><td>{p.unit_of_measure}</td><td>{p.minimum_stock}</td><td><span className={"state "+(p.is_active ? "approved" : "rejected")}>{p.is_active ? "Active" : "Inactive"}</span></td></tr>)}</tbody></table></div> : <div className="empty-state">No product records have been added. Product setup can be completed after the mine-approved product register is supplied.</div>}</section>}
+          {section === "daily-orders" && <section className="daily-orders-layout">
+            <section className="data-card wide-card"><div className="card-heading"><div><h3>Submit daily explosive requirements</h3><p>Complete the work details and add each required product. Submission routes the sheet for authorisation.</p></div><span className="state pending_approval">New request</span></div>
+              <form className="order-form" onSubmit={submitDailyOrder}>
+                <div className="order-fields">
+                  <label>Order date<input type="date" value={orderDate} onChange={e=>setOrderDate(e.target.value)} required /></label>
+                  <label>Shift<select value={orderShift} onChange={e=>setOrderShift(e.target.value)}><option value="day">Day shift</option><option value="night">Night shift</option></select></label>
+                  <label>Work area / section<input value={workArea} onChange={e=>setWorkArea(e.target.value)} placeholder="e.g. Mining section" required /></label>
+                  <label>Blast site / location<input value={blastSite} onChange={e=>setBlastSite(e.target.value)} placeholder="Enter blast location" /></label>
+                </div>
+                <label>Purpose / work description<textarea value={orderPurpose} onChange={e=>setOrderPurpose(e.target.value)} rows={3} placeholder="Describe the planned work and reason for the explosive requirement" required /></label>
+                <div className="order-lines-heading"><h4>Explosive products required</h4><button type="button" className="text-action" onClick={()=>setDraftOrderItems([...draftOrderItems,{product_id:"",quantity_requested:"",notes:""}])}>+ Add product line</button></div>
+                {draftOrderItems.map((line,index)=><div className="order-line" key={index}>
+                  <label>Product<select value={line.product_id} onChange={e=>setDraftOrderItems(draftOrderItems.map((x,i)=>i===index?{...x,product_id:e.target.value}:x))} required><option value="">Select registered product</option>{activeProducts.map(p=><option key={p.id} value={p.id}>{p.product_code} — {p.product_name} ({p.unit_of_measure})</option>)}</select></label>
+                  <label>Quantity<input type="number" min="0.001" step="0.001" value={line.quantity_requested} onChange={e=>setDraftOrderItems(draftOrderItems.map((x,i)=>i===index?{...x,quantity_requested:e.target.value}:x))} required /></label>
+                  <label>Line notes<input value={line.notes} onChange={e=>setDraftOrderItems(draftOrderItems.map((x,i)=>i===index?{...x,notes:e.target.value}:x))} placeholder="Optional" /></label>
+                  {draftOrderItems.length>1 && <button type="button" className="remove-line" onClick={()=>setDraftOrderItems(draftOrderItems.filter((_,i)=>i!==index))}>Remove</button>}
+                </div>)}
+                {activeProducts.length===0 && <div className="info-note">There are no active products in the product register yet. An administrator or Magazine Master must add the mine-approved products first.</div>}
+                <div className="info-note">Submitting records your name, date and requested quantities. An Authorising Officer must approve the request before the magazine can fulfil it.</div>
+                <button className="primary-btn" disabled={busy || activeProducts.length===0}>{busy ? "Submitting…" : "Submit daily order for approval"}</button>
+              </form>
+            </section>
+            <section className="data-card wide-card"><div className="card-heading"><div><h3>Daily order register</h3><p>Submitted requests and their approval / fulfilment progress.</p></div><span className="role-pill">{dailyOrders.length} records</span></div>
+              {dailyOrders.length ? <div className="table-wrap"><table><thead><tr><th>ORDER</th><th>DATE / SHIFT</th><th>REQUESTED BY</th><th>WORK AREA</th><th>STATUS</th><th>ACTION</th></tr></thead><tbody>{dailyOrders.map(o=><tr key={o.id}><td><b>{"DO-"+o.order_number}</b><div className="order-subtext">{dailyOrderItems.filter(i=>i.order_id===o.id).map(i=>{const p=products.find(x=>x.id===i.product_id);return (p?.product_name||"Product")+": "+i.quantity_requested+" "+(p?.unit_of_measure||"");}).join(" · ")}</div></td><td>{new Date(o.order_date+"T00:00:00").toLocaleDateString("en-ZA")}<div className="order-subtext">{o.shift} shift</div></td><td>{o.requester_name}</td><td>{o.work_area}{o.blast_site ? <div className="order-subtext">{o.blast_site}</div> : null}</td><td><span className={"state "+(o.status==="approved"?"approved":o.status==="rejected"?"rejected":o.status==="fulfilled"?"posted":"pending_approval")}>{o.status}</span></td><td>{canApproveOrders && o.status==="submitted" && <span className="action-pair"><button className="mini-action" disabled={busy} onClick={()=>updateDailyOrder(o,"approve")}>Approve</button><button className="mini-action danger" disabled={busy} onClick={()=>updateDailyOrder(o,"reject")}>Reject</button></span>}{canFulfilOrders && o.status==="approved" && <button className="mini-action" disabled={busy} onClick={()=>updateDailyOrder(o,"fulfil")}>Mark fulfilled</button>}{(!canApproveOrders || o.status!=="submitted") && (!canFulfilOrders || o.status!=="approved") && <span className="order-subtext">—</span>}</td></tr>)}</tbody></table></div> : <div className="empty-state">No daily explosive orders have been submitted yet.</div>}
+            </section>
+          </section>}
           {section === "transactions" && <section className="data-card wide-card"><div className="card-heading"><div><h3>Stock transaction records</h3><p>Recorded receipts, issues, returns and adjustments. This view is read-only.</p></div><span className="role-pill">Latest 8 records</span></div>{transactions.length ? <div className="table-wrap"><table><thead><tr><th>REFERENCE</th><th>TYPE</th><th>DATE</th><th>QUANTITY</th><th>STATUS</th></tr></thead><tbody>{transactions.map(t=><tr key={t.id}><td>EMS-{t.transaction_number}</td><td className="capitalize">{t.transaction_type}</td><td>{new Date(t.transaction_date).toLocaleString("en-ZA")}</td><td>{t.quantity}</td><td><span className={"state "+t.status}>{t.status.replaceAll("_"," ")}</span></td></tr>)}</tbody></table></div> : <div className="empty-state">No stock transaction records are available yet.</div>}</section>}
           <footer className="app-footer">CROCODILE RIVER MINE · EXPLOSIVES MANAGEMENT SYSTEM · AUTHORISED ACCESS ONLY</footer>
         </div>
