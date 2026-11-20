@@ -43,6 +43,7 @@ export default function Home() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [controlBookRows, setControlBookRows] = useState<LedgerTransaction[]>([]);
   const [ledgerProduct, setLedgerProduct] = useState("all");
+  const [ledgerCategory, setLedgerCategory] = useState("all");
   const [ledgerFrom, setLedgerFrom] = useState("");
   const [ledgerTo, setLedgerTo] = useState("");
   const [dailyOrders, setDailyOrders] = useState<DailyOrder[]>([]);
@@ -328,6 +329,13 @@ export default function Home() {
       return sum + (t.adjustment_direction === "increase" ? amount : -amount);
     }, 0)
   }));
+  const productBookSection = (product?: Product) => {
+    const label = `${product?.product_code || ""} ${product?.product_name || ""}`.toLowerCase();
+    if (/tamp/.test(label)) return "Tamping";
+    if (/bag/.test(label)) return "Bags";
+    if (/box/.test(label)) return "Boxes";
+    return "Unclassified";
+  };
   const runningBalances = new Map<string, number>();
   const controlBookEntries = controlBookRows.map(t => {
     const product = products.find(p => p.id === t.product_id);
@@ -339,6 +347,7 @@ export default function Home() {
     runningBalances.set(t.product_id, balance);
     return { ...t, product, movement, balance };
   }).filter(t => (ledgerProduct === "all" || t.product_id === ledgerProduct)
+    && (ledgerCategory === "all" || productBookSection(t.product) === ledgerCategory)
     && (!ledgerFrom || t.transaction_date.slice(0,10) >= ledgerFrom)
     && (!ledgerTo || t.transaction_date.slice(0,10) <= ledgerTo))
     .reverse();
@@ -554,13 +563,14 @@ export default function Home() {
             <section className="data-card wide-card">
               <div className="card-heading"><div><h3>Explosives control book</h3><p>Chronological, read-only register of posted magazine movements.</p></div><button className="text-action" type="button" onClick={()=>window.print()}>Print control book ↗</button></div>
               <div className="ledger-filters">
+                <label>Control-book section<select value={ledgerCategory} onChange={e=>setLedgerCategory(e.target.value)}><option value="all">All sections</option><option value="Boxes">Boxes</option><option value="Bags">Bags</option><option value="Tamping">Tamping</option><option value="Unclassified">Unclassified products</option></select></label>
                 <label>Product<select value={ledgerProduct} onChange={e=>setLedgerProduct(e.target.value)}><option value="all">All products</option>{activeProducts.map(p=><option key={p.id} value={p.id}>{p.product_code} — {p.product_name}</option>)}</select></label>
                 <label>From date<input type="date" value={ledgerFrom} onChange={e=>setLedgerFrom(e.target.value)} /></label>
                 <label>To date<input type="date" value={ledgerTo} onChange={e=>setLedgerTo(e.target.value)} /></label>
-                <button type="button" className="text-action" onClick={()=>{setLedgerProduct("all");setLedgerFrom("");setLedgerTo("");}}>Clear filters</button>
+                <button type="button" className="text-action" onClick={()=>{setLedgerProduct("all");setLedgerCategory("all");setLedgerFrom("");setLedgerTo("");}}>Clear filters</button>
               </div>
-              <div className="info-note">Only transactions with status “posted” affect these balances. Pending, approved-but-not-posted and rejected transactions are excluded. Daily order fulfilment currently records order status only; it does not automatically post a stock issue.</div>
-              {controlBookEntries.length ? <div className="table-wrap"><table className="ledger-table"><thead><tr><th>DATE / TIME</th><th>BOOK REF.</th><th>PRODUCT</th><th>MOVEMENT</th><th>IN</th><th>OUT</th><th>RUNNING BALANCE</th><th>REFERENCE / DETAILS</th></tr></thead><tbody>{controlBookEntries.map(t=><tr key={t.id}><td>{new Date(t.transaction_date).toLocaleString("en-ZA")}</td><td><b>EMS-{t.transaction_number}</b></td><td>{t.product?.product_name || "Product unavailable"}<div className="order-subtext">{t.product?.product_code || ""}</div></td><td className="capitalize">{t.transaction_type}{t.transaction_type==="adjustment" ? " ("+t.adjustment_direction+")" : ""}</td><td>{t.movement>0 ? t.movement.toLocaleString("en-ZA") : "—"}</td><td>{t.movement<0 ? Math.abs(t.movement).toLocaleString("en-ZA") : "—"}</td><td><b>{t.balance.toLocaleString("en-ZA",{maximumFractionDigits:3})}</b></td><td>{t.reference_number || "—"}{t.source_or_destination ? <div className="order-subtext">{t.source_or_destination}</div> : null}{t.issued_to ? <div className="order-subtext">Issued to: {t.issued_to}</div> : null}{t.purpose ? <div className="order-subtext">{t.purpose}</div> : null}</td></tr>)}</tbody></table></div> : <div className="empty-state">No posted stock movements match these filters. Record and post a receipt, issue, return or adjustment to begin the control book.</div>}
+              <div className="info-note">This register follows the Explosives Control Book sections (Boxes, Bags and Tamping). Section matching uses product names/codes; products that do not clearly identify one of these sections are shown as Unclassified for administrator review. Only posted movements affect balances. The current database does not capture a miner company number or a handwritten signature, so those fields are clearly marked as not recorded rather than inferred. Daily-order fulfilment is not treated as a stock issue unless a separate posted issue transaction exists.</div>
+              {controlBookEntries.length ? <div className="table-wrap"><table className="ledger-table"><thead><tr><th>DATE</th><th>BOOK REF.</th><th>CONTROL-BOOK SECTION / PRODUCT</th><th>OPENING BALANCE</th><th>RECEIVED</th><th>ISSUED</th><th>WORK AREA / SECTION</th><th>MINER COMPANY NO.</th><th>MINER NAME / SIGNATURE</th><th>RETURNED</th><th>CLOSING BALANCE</th><th>REFERENCE / NOTES</th></tr></thead><tbody>{controlBookEntries.map(t=><tr key={t.id}><td>{new Date(t.transaction_date).toLocaleDateString("en-ZA")}</td><td><b>EMS-{t.transaction_number}</b></td><td><b>{productBookSection(t.product)}</b><div className="order-subtext">{t.product?.product_name || "Product unavailable"} · {t.product?.product_code || ""}</div></td><td>{(t.balance-t.movement).toLocaleString("en-ZA",{maximumFractionDigits:3})}</td><td>{t.transaction_type==="receipt" ? Number(t.quantity).toLocaleString("en-ZA") : "—"}</td><td>{t.transaction_type==="issue" ? Number(t.quantity).toLocaleString("en-ZA") : "—"}</td><td>{t.source_or_destination || "Not recorded"}</td><td>Not recorded</td><td>{t.issued_to || "Not recorded"}<div className="order-subtext">Signature: not captured digitally</div></td><td>{t.transaction_type==="return" ? Number(t.quantity).toLocaleString("en-ZA") : "—"}</td><td><b>{t.balance.toLocaleString("en-ZA",{maximumFractionDigits:3})}</b></td><td>{t.reference_number || "—"}{t.purpose ? <div className="order-subtext">{t.purpose}</div> : null}{t.notes ? <div className="order-subtext">{t.notes}</div> : null}</td></tr>)}</tbody></table></div> : <div className="empty-state">No posted stock movements match these filters. Record and post a receipt, issue, return or adjustment to begin the control book.</div>}
               <p className="table-footnote">Running balances are calculated in transaction date and transaction number order for each product. Records are read-only in this module; corrections must follow the authorised stock transaction process.</p>
             </section>
           </section>}
