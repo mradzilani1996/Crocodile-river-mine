@@ -212,3 +212,17 @@ td b{color:#193c24}
 .mini-action.danger{background:#a43b32}
 @media(max-width:850px){.order-line{grid-template-columns:1fr 1fr}.order-line label:first-child{grid-column:1/-1}}
 @media(max-width:600px){.order-fields,.order-line{grid-template-columns:1fr}.order-line label:first-child{grid-column:auto}.order-lines-heading{align-items:flex-start;flex-direction:column}.action-pair{flex-wrap:wrap}}
+
+
+/* Improve visibility and fit of the dashboard logo and mine title */
+.sidebar .side-brand{width:100%;min-width:0;gap:10px;align-items:center;padding-left:4px;padding-right:4px}
+.sidebar .side-logo{width:104px;height:48px;flex:0 0 104px;object-fit:contain}
+.sidebar .side-brand>div{min-width:0;flex:1}
+.sidebar .side-brand strong{display:block;color:#fff!important;font-size:9px;line-height:1.35;letter-spacing:.65px;white-space:normal;overflow-wrap:anywhere}
+.sidebar .side-brand span{display:block;color:#e0e9dc!important;font-size:7.5px;line-height:1.45;letter-spacing:.65px;white-space:normal;overflow-wrap:anywhere}
+@media(max-width:650px){
+  .sidebar .side-brand{max-width:100%;gap:12px}
+  .sidebar .side-logo{width:126px;height:43px;flex-basis:126px}
+  .sidebar .side-brand strong{font-size:9px}
+  .sidebar .side-brand span{font-size:8px}
+}
