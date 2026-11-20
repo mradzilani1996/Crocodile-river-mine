@@ -423,22 +423,22 @@ export default function Home() {
       <aside className="sidebar">
         <div className="side-brand"><img className="side-logo" src="/crm-logo.svg" alt="Eastplats logo" /><div><strong>CROCODILE RIVER MINE</strong><span>EXPLOSIVES MANAGEMENT</span></div></div>
         <div className="nav-caption">WORKSPACE</div>
-        <button className={section === "overview" ? "nav-item active" : "nav-item"} onClick={() => setSection("overview")}>▦ <span>Dashboard</span></button>
+        <button className={section === "overview" ? "nav-item active" : "nav-item"} onClick={() => setSection("overview")}>▤ <span>Overview</span></button>
+        <button className={section === "products" ? "nav-item active" : "nav-item"} onClick={() => setSection("products")}>▤ <span>Explosives inventory</span></button>
+        <a className="nav-item" href="/stock-control">⇄ <span>Stock movements</span></a>
+        <button className={section === "people" ? "nav-item active" : "nav-item"} onClick={() => setSection("people")}>♙ <span>User access</span></button>
+        <a className="nav-item" href="/stock-control?tab=audit">◷ <span>Audit trail</span></a>
+        <div className="nav-section-label">MAGAZINE OPERATIONS</div>
         <button className={section === "magazine" ? "nav-item active" : "nav-item"} onClick={() => setSection("magazine")}>▣ <span>Magazine management</span></button>
-        <button className={section === "people" ? "nav-item active" : "nav-item"} onClick={() => setSection("people")}>♙ <span>User profiles</span></button>
-        <button className={section === "products" ? "nav-item active" : "nav-item"} onClick={() => setSection("products")}>▤ <span>Product register</span></button>
-        <button className={section === "transactions" ? "nav-item active" : "nav-item"} onClick={() => setSection("transactions")}>⇄ <span>Stock records</span></button>
         <button className={section === "daily-orders" ? "nav-item active" : "nav-item"} onClick={() => setSection("daily-orders")}>▧ <span>Daily order sheet</span></button>
         <button className={section === "control-book" ? "nav-item active" : "nav-item"} onClick={() => setSection("control-book")}>▤ <span>Explosives control book</span></button>
         <button className={section === "ordering" ? "nav-item active" : "nav-item"} onClick={() => setSection("ordering")}>▧ <span>Explosives & accessories ordering</span></button>
         <a className="nav-item" href="/compliance">✓ <span>Compliance & incident register</span></a>
         <a className="nav-item" href="/operations">⇄ <span>Magazine operations</span></a>
-        <a className="nav-item" href="/stock-control">▣ <span>Stock management & approvals</span></a>
         <a className="nav-item" href="/control-book/new">▤ <span>New Control Book Entry</span></a>
-        <div className="side-bottom"><div className="user-chip"><span className="avatar">{(profile?.full_name || "A").slice(0,1).toUpperCase()}</span><div><strong>{profile?.full_name || user?.email || "EMS user"}</strong><small>{roleName}</small></div></div><button className="signout" onClick={signOut}>Sign out ↗</button></div>
       </aside>
       <section className="main-area">
-        <header className="app-top"><div><span className="crumb">CROCODILE RIVER MINE / EMS</span><h1>{section === "overview" ? "Dashboard" : section === "magazine" ? "Magazine management" : section === "people" ? "User profiles" : section === "products" ? "Product register" : section === "daily-orders" ? "Daily explosive order sheet" : section === "control-book" ? "Explosives control book" : section === "ordering" ? "Explosives & accessories ordering" : "Stock records"}</h1></div><div className="top-right"><span className="status-dot"></span> System online <button onClick={loadDashboard} className="refresh-btn">↻ Refresh</button></div></header>
+        <header className="app-top"><div><span className="crumb">CROCODILE RIVER MINE / EMS</span><h1>{section === "overview" ? "Overview" : section === "products" ? "Explosives inventory" : section === "people" ? "User access" : section === "magazine" ? "Magazine management" : section === "people" ? "User profiles" : section === "products" ? "Product register" : section === "daily-orders" ? "Daily explosive order sheet" : section === "control-book" ? "Explosives control book" : section === "ordering" ? "Explosives & accessories ordering" : "Stock records"}</h1></div><div className="top-right"><span className="status-dot"></span> System online <button onClick={loadDashboard} className="refresh-btn">↻ Refresh</button></div></header>
         <div className="content">
           {notice && <div className="notice success-notice">{notice}</div>}
           {error && <div className="notice error-notice">{error}</div>}
