@@ -270,8 +270,8 @@ export default function Home() {
   async function submitPurchaseOrder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!supabase) return;
-    if (purchaseLines.some(line => !line.quantity || Number(line.quantity) <= 0 || (!line.product_id && (!line.item_description.trim() || !line.unit_of_measure.trim())))) {
-      setError("Complete each order line with an item, unit and quantity greater than zero."); return;
+    if (purchaseLines.some(line => !line.product_id || !line.quantity || Number(line.quantity) <= 0)) {
+      setError("Select an approved product from the product register and enter a quantity greater than zero for every inventory line. Add missing products to the register first."); return;
     }
     setBusy(true); setError(""); setNotice("");
     const { error: submitError } = await supabase.rpc("ems_submit_purchase_order", {
@@ -546,7 +546,7 @@ export default function Home() {
                 <label>Purpose / reason for order<textarea value={purchasePurpose} onChange={e=>setPurchasePurpose(e.target.value)} rows={3} placeholder="Explain the business requirement for this order" required /></label>
                 <div className="order-lines-heading"><h4>Explosives and accessories requested</h4><button type="button" className="text-action" onClick={()=>setPurchaseLines([...purchaseLines,{product_id:"",item_description:"",quantity:"",unit_of_measure:"units",notes:""}])}>+ Add item</button></div>
                 {purchaseLines.map((line,index)=><div className="order-line purchase-line" key={index}>
-                  <label>Registered product (optional)<select value={line.product_id} onChange={e=>{const selected=products.find(p=>p.id===e.target.value);setPurchaseLines(purchaseLines.map((x,i)=>i===index?{...x,product_id:e.target.value,item_description:selected?.product_name||"",unit_of_measure:selected?.unit_of_measure||x.unit_of_measure}:x));}}><option value="">Manual item / accessory</option>{activeProducts.map(p=><option key={p.id} value={p.id}>{p.product_code} — {p.product_name}</option>)}</select></label>
+                  <label>Registered product (required for stock tracking)<select required value={line.product_id} onChange={e=>{const selected=products.find(p=>p.id===e.target.value);setPurchaseLines(purchaseLines.map((x,i)=>i===index?{...x,product_id:e.target.value,item_description:selected?.product_name||"",unit_of_measure:selected?.unit_of_measure||x.unit_of_measure}:x));}}><option value="">Select approved product</option>{activeProducts.map(p=><option key={p.id} value={p.id}>{p.product_code} — {p.product_name}</option>)}</select></label>
                   <label>Item description<input value={line.item_description} onChange={e=>setPurchaseLines(purchaseLines.map((x,i)=>i===index?{...x,item_description:e.target.value}:x))} placeholder="Explosive or accessory description" required /></label>
                   <label>Quantity<input type="number" min="0.001" step="0.001" value={line.quantity} onChange={e=>setPurchaseLines(purchaseLines.map((x,i)=>i===index?{...x,quantity:e.target.value}:x))} required /></label>
                   <label>Unit<input value={line.unit_of_measure} onChange={e=>setPurchaseLines(purchaseLines.map((x,i)=>i===index?{...x,unit_of_measure:e.target.value}:x))} placeholder="e.g. units, boxes, kg" required /></label>
