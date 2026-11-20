@@ -1,3 +1,4 @@
+import EmsPageHeader from "@/components/ems-page-header";
 "use client";
 import { FormEvent,useEffect,useMemo,useState } from "react";
 import { createClient,User } from "@supabase/supabase-js";
@@ -30,7 +31,7 @@ export default function NewControlBookEntry(){
  }
  if(!db)return <main style={{padding:30}}>EMS database configuration is missing.</main>;
  if(!user||!profile)return <main style={{padding:30,maxWidth:680,margin:"auto"}}><h1>Explosives Control Book entry</h1><p>Sign in through the EMS dashboard first.</p><a href="/">Return to EMS login</a>{error&&<p>{error}</p>}</main>;
- return <main style={{minHeight:"100vh",background:"#f4f6f8",padding:24,color:"#17212b"}}><div style={{maxWidth:1050,margin:"auto"}}>
+ return <main className="ems-page" style={{minHeight:"100vh",background:"#f4f6f8",padding:24,color:"#17212b"}}><EmsPageHeader active="stock"/><div style={{maxWidth:1050,margin:"auto"}}>
  <a href="/" style={{color:"#315a75",fontWeight:700,textDecoration:"none"}}>← EMS Dashboard</a><h1 style={{fontSize:30,marginBottom:5}}>Explosives Control Book</h1><p style={{color:"#667085",marginTop:0}}>Crocodile River Mine · Boxes, Bags and Tamping · Signed in as {profile.full_name}</p>
  {error&&<p role="alert" style={{background:"#fff0f0",color:"#9b2424",padding:12,borderRadius:8}}>{error}</p>}{message&&<p style={{background:"#eaf6ef",color:"#17633a",padding:12,borderRadius:8}}>{message}</p>}
  <form onSubmit={submit}>
