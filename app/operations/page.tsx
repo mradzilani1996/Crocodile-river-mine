@@ -37,7 +37,7 @@ export default function OperationsPage() {
       supabase.from("ems_shift_handovers").select("*").order("created_at",{ascending:false}).limit(200),
       supabase.from("ems_stocktakes").select("*,ems_explosive_products(product_code,product_name,unit_of_measure)").order("count_date",{ascending:false}).limit(200),
       supabase.from("ems_magazine_access_log").select("*").order("access_time",{ascending:false}).limit(300),
-      supabase.from("ems_explosive_products").select("id,product_code,product_name,unit_of_measure,is_active").eq("is_active",true).order("product_name"),
+      supabase.from("ems_explosive_products").select("id,product_code,product_name,control_book_section,unit_of_measure,is_active").eq("is_active",true).order("product_name"),
       supabase.from("ems_stock_transactions").select("product_id,transaction_type,status,quantity,adjustment_direction").eq("status","posted").limit(3000)
     ]);
     const failure=h.error||s.error||a.error||p.error||t.error;
@@ -58,7 +58,7 @@ export default function OperationsPage() {
     if(e2)setError(e2.message);else{setMessage("Shift handover recorded.");setHandover({handover_date:today,shift:"day",outgoing_person:"",incoming_person:"",stock_status:"checked",security_status:"satisfactory",seal_key_status:"intact",outstanding_matters:"",handover_notes:""});await load();}setBusy(false);
   }
   async function saveCount(e:FormEvent){e.preventDefault();if(!supabase||!user||!profile)return;const bal=balances.find(x=>x.product.id===count.product_id);if(!bal){setError("Select a registered product.");return;}setBusy(true);setError("");setMessage("");
-    const {error:e2}=await supabase.from("ems_stocktakes").insert({count_date:count.count_date,product_id:count.product_id,system_balance:bal.balance,physical_balance:Number(count.physical_balance),discrepancy_notes:count.discrepancy_notes||null,counted_by:user.id,counted_by_name:profile.full_name});
+    const {error:e2}=await supabase.from("ems_stocktakes").insert({count_date:count.count_date,product_id:count.product_id,system_balance:bal.balance,physical_balance:Number(count.physical_balance),discrepancy_notes:count.discrepancy_notes||null,counted_by:user.id,counted_by_name:profile.full_name,control_book_section:bal.product.control_book_section});
     if(e2)setError(e2.message);else{setMessage("Physical count saved for management verification. No stock balance was changed.");setCount({count_date:today,product_id:"",physical_balance:"",discrepancy_notes:""});await load();}setBusy(false);
   }
   async function verify(row:Row,status:"verified"|"adjustment_required"){if(!supabase||!user||!profile||!canVerify)return;setBusy(true);setError("");setMessage("");
