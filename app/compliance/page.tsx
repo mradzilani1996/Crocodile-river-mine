@@ -26,7 +26,8 @@ export default function CompliancePage() {
   const [error, setError] = useState("");
   const [incident, setIncident] = useState({ incident_type: "other", severity: "low", location: "", description: "", immediate_action: "" });
   const [inspection, setInspection] = useState({ inspection_type: "Magazine inspection", location: "", findings: "", non_conformances: "", corrective_actions: "", responsible_person: "", due_date: "" });
-  const [document, setDocument] = useState({ document_number: "MIN-DOC-0052", title: "Explosives Control Book", document_type: "Control book", revision: "Rev 5", effective_date: "2025-08-01", review_date: "2028-08-01", external_url: "https://github.com/mradzilani1996/Crocodile-river-mine" });
+  const [document, setDocument] = useState({ document_number: "", title: "", document_type: "Controlled document", effective_date: "", review_date: "" });
+  const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [reviewNotes, setReviewNotes] = useState<Record<string,string>>({});
   const role = profile?.role || "";
   const canManage = ["admin","management"].includes(role);
@@ -73,10 +74,36 @@ export default function CompliancePage() {
   }
   async function submitDocument(e: FormEvent) {
     e.preventDefault(); if (!supabase || !user || !profile || !canManage) return;
+    if (!documentFile) { setError("Choose the actual document file to upload."); return; }
+    if (documentFile.size > 25 * 1024 * 1024) { setError("The document must be 25 MB or smaller."); return; }
     setBusy(true); setError(""); setMessage("");
-    const {error: err} = await supabase.from("ems_document_register").upsert({...document,uploaded_by:user.id,uploaded_by_name:profile.full_name},{onConflict:"document_number"});
-    if (err) setError(err.message); else { setMessage("Document register entry saved."); await load(); }
+    const safeName = documentFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const storagePath = user.id + "/" + Date.now() + "-" + safeName;
+    const { error: uploadError } = await supabase.storage.from("ems-documents").upload(storagePath, documentFile, { upsert: false, contentType: documentFile.type || "application/octet-stream" });
+    if (uploadError) { setError("Document upload failed: " + uploadError.message); setBusy(false); return; }
+    const {error: err} = await supabase.from("ems_document_register").upsert({...document, revision:"Not specified", external_url:null, storage_path:storagePath, uploaded_by:user.id, uploaded_by_name:profile.full_name},{onConflict:"document_number"});
+    if (err) {
+      await supabase.storage.from("ems-documents").remove([storagePath]);
+      setError("The file uploaded, but its register entry could not be saved: " + err.message);
+    } else {
+      setMessage("Document and register entry saved successfully.");
+      setDocument({ document_number:"", title:"", document_type:"Controlled document", effective_date:"", review_date:"" });
+      setDocumentFile(null);
+      const picker = document.getElementById("controlled-document-file") as HTMLInputElement | null;
+      if (picker) picker.value = "";
+      await load();
+    }
     setBusy(false);
+  }
+
+  async function openDocument(row: Row) {
+    if (!supabase) return;
+    if (row.storage_path) {
+      const { data, error: signedError } = await supabase.storage.from("ems-documents").createSignedUrl(row.storage_path, 300);
+      if (signedError || !data?.signedUrl) { setError("The stored document could not be opened: " + (signedError?.message || "No download link returned.")); return; }
+      window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+    } else if (row.external_url) window.open(row.external_url, "_blank", "noopener,noreferrer");
+    else setError("No uploaded file is attached to this register entry.");
   }
   async function reviewIncident(row: Row, status: string) {
     if (!supabase || !user || !canManage) return;
@@ -132,17 +159,17 @@ export default function CompliancePage() {
         <section style={cardStyle}><h2 style={{marginTop:0}}>Inspection register</h2>{inspections.length===0?<p>No inspections recorded.</p>:inspections.map(r=><article key={r.id} style={{borderTop:"1px solid #e6eaf0",padding:"14px 0"}}><b>INSP-{r.inspection_number} · {r.inspection_type}</b><p>{r.findings}</p><small>{r.inspection_date} · {r.location} · Inspector: {r.inspector_name} · Status: {r.status}</small>{r.non_conformances&&<p><b>Non-conformances:</b> {r.non_conformances}</p>}{r.corrective_actions&&<p><b>Corrective actions:</b> {r.corrective_actions}</p>}{r.responsible_person&&<p><b>Responsible:</b> {r.responsible_person} · Due: {r.due_date||"Not set"}</p>}{canManage&&r.status!=="closed"&&<button style={buttonStyle} disabled={busy} onClick={()=>updateInspection(r,"closed")}>Verify and close</button>}</article>)}</section>
       </>}
       {tab==="documents" && <>
-        <section style={cardStyle}><h2 style={{marginTop:0}}>Controlled document register</h2><p>Record document number, title, revision, effective date and review date. Attach a file in Supabase Storage or link to the controlled source.</p>{canManage?<form onSubmit={submitDocument} style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:14}}>
+        <section style={cardStyle}><h2 style={{marginTop:0}}>Controlled document register</h2><p>Upload the actual controlled document (PDF or Office file). Files are stored privately and can only be opened by signed-in EMS users.</p>{canManage?<form onSubmit={submitDocument} style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:14}}>
           <label style={labelStyle}>Document number<input required style={inputStyle} value={document.document_number} onChange={e=>setDocument({...document,document_number:e.target.value})}/></label>
           <label style={labelStyle}>Title<input required style={inputStyle} value={document.title} onChange={e=>setDocument({...document,title:e.target.value})}/></label>
           <label style={labelStyle}>Document type<input required style={inputStyle} value={document.document_type} onChange={e=>setDocument({...document,document_type:e.target.value})}/></label>
-          <label style={labelStyle}>Revision<input required style={inputStyle} value={document.revision} onChange={e=>setDocument({...document,revision:e.target.value})}/></label>
           <label style={labelStyle}>Effective date<input type="date" style={inputStyle} value={document.effective_date} onChange={e=>setDocument({...document,effective_date:e.target.value})}/></label>
           <label style={labelStyle}>Review date<input type="date" style={inputStyle} value={document.review_date} onChange={e=>setDocument({...document,review_date:e.target.value})}/></label>
-          <label style={{...labelStyle,gridColumn:"1/-1"}}>Controlled source URL<input required type="url" style={inputStyle} value={document.external_url} onChange={e=>setDocument({...document,external_url:e.target.value})}/></label>
-          <div><button disabled={busy} style={buttonStyle}>Save document</button></div>
+          <label style={{...labelStyle,gridColumn:"1/-1"}}>Upload actual document<input id="controlled-document-file" required type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png" style={{...inputStyle,padding:8}} onChange={e=>setDocumentFile(e.target.files?.[0] || null)}/><small style={{fontWeight:400,color:"#667085"}}>PDF, Word, Excel, PowerPoint or image · Maximum 25 MB</small></label>
+          {documentFile && <p style={{gridColumn:"1/-1",margin:0,fontSize:13,color:"#344054"}}>Selected: {documentFile.name} ({(documentFile.size/1024/1024).toFixed(2)} MB)</p>}
+          <div><button disabled={busy} style={buttonStyle}>{busy?"Uploading…":"Upload and save document"}</button></div>
         </form>:<p>Only administrators and management can maintain controlled documents.</p>}</section>
-        <section style={cardStyle}><h2 style={{marginTop:0}}>Document register</h2>{documents.length===0?<p>No controlled documents have been registered.</p>:<div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",textAlign:"left"}}><thead><tr>{["Document no.","Title","Revision","Effective","Review","Status","Source"].map(x=><th key={x} style={{padding:10,borderBottom:"1px solid #dce2e8"}}>{x}</th>)}</tr></thead><tbody>{documents.map(d=><tr key={d.id}><td style={{padding:10,borderBottom:"1px solid #edf0f3"}}>{d.document_number}</td><td style={{padding:10,borderBottom:"1px solid #edf0f3"}}>{d.title}</td><td style={{padding:10,borderBottom:"1px solid #edf0f3"}}>{d.revision}</td><td style={{padding:10,borderBottom:"1px solid #edf0f3"}}>{d.effective_date||"—"}</td><td style={{padding:10,borderBottom:"1px solid #edf0f3"}}>{d.review_date||"—"}</td><td style={{padding:10,borderBottom:"1px solid #edf0f3"}}>{d.status}</td><td style={{padding:10,borderBottom:"1px solid #edf0f3"}}><a href={d.external_url||"#"} target="_blank" rel="noreferrer">Open source</a></td></tr>)}</tbody></table></div>}</section>
+        <section style={cardStyle}><h2 style={{marginTop:0}}>Document register</h2>{documents.length===0?<p>No controlled documents have been registered.</p>:<div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",textAlign:"left"}}><thead><tr>{["Document no.","Title","Type","Effective","Review","Status","File"].map(x=><th key={x} style={{padding:10,borderBottom:"1px solid #dce2e8"}}>{x}</th>)}</tr></thead><tbody>{documents.map(d=><tr key={d.id}><td style={{padding:10,borderBottom:"1px solid #edf0f3"}}>{d.document_number}</td><td style={{padding:10,borderBottom:"1px solid #edf0f3"}}>{d.title}</td><td style={{padding:10,borderBottom:"1px solid #edf0f3"}}>{d.document_type}</td><td style={{padding:10,borderBottom:"1px solid #edf0f3"}}>{d.effective_date||"—"}</td><td style={{padding:10,borderBottom:"1px solid #edf0f3"}}>{d.review_date||"—"}</td><td style={{padding:10,borderBottom:"1px solid #edf0f3"}}>{d.status}</td><td style={{padding:10,borderBottom:"1px solid #edf0f3"}}><button type="button" style={{...buttonStyle,padding:"7px 11px"}} onClick={()=>openDocument(d)}>{d.storage_path?"Open uploaded file":"Open source link"}</button></td></tr>)}</tbody></table></div>}</section>
       </>}
       <footer style={{color:"#667085",fontSize:12,padding:"12px 2px"}}>CROCODILE RIVER MINE · EMS · AUTHORISED ACCESS ONLY · All changes are subject to database role permissions.</footer>
     </div>
