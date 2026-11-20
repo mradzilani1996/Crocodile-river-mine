@@ -365,15 +365,20 @@ export default function Home() {
   const roleName = (profile?.role || "").replaceAll("_", " ");
   const dueDocumentReviews = documentReviewRows.filter(d => d.status === "current" && d.review_date && d.review_date <= new Date(Date.now() + 30*86400000).toISOString().slice(0,10));
   const lowStockProducts = activeProducts.filter(p => { const b = controlBookRows.filter(t=>t.product_id===p.id).reduce((sum,t)=>sum+(t.transaction_type==="receipt"||t.transaction_type==="return"?1:t.transaction_type==="issue"?-1:t.adjustment_direction==="increase"?1:-1)*Number(t.quantity),0); return b <= Number(p.minimum_stock); });
-  const controlBookBalances = activeProducts.map(p => ({
-    product: p,
-    balance: controlBookRows.filter(t => t.product_id === p.id).reduce((sum,t) => {
-      const amount = Number(t.quantity);
-      if (t.transaction_type === "receipt" || t.transaction_type === "return") return sum + amount;
-      if (t.transaction_type === "issue") return sum - amount;
-      return sum + (t.adjustment_direction === "increase" ? amount : -amount);
-    }, 0)
-  }));
+  const controlBookBalances = activeProducts.flatMap(p => {
+    const recordedSections = Array.from(new Set(controlBookRows.filter(t => t.product_id === p.id).map(t => productBookSection(p, t.control_book_section))));
+    const sections = recordedSections.length ? recordedSections : [productBookSection(p)];
+    return sections.map(section => ({
+      product: p,
+      section,
+      balance: controlBookRows.filter(t => t.product_id === p.id && productBookSection(p, t.control_book_section) === section).reduce((sum,t) => {
+        const amount = Number(t.quantity);
+        if (t.transaction_type === "receipt" || t.transaction_type === "return") return sum + amount;
+        if (t.transaction_type === "issue") return sum - amount;
+        return sum + (t.adjustment_direction === "increase" ? amount : -amount);
+      }, 0)
+    }));
+  });
   const productBookSection = (product?: Product, recordedSection?: string | null) => {
     if (recordedSection && ["Boxes","Bags","Tamping"].includes(recordedSection)) return recordedSection;
     const label = `${product?.product_code || ""} ${product?.product_name || ""}`.toLowerCase();
@@ -394,12 +399,13 @@ export default function Home() {
       ? Number(t.package_quantity || 0)
       : t.transaction_type === "issue" ? -Number(t.package_quantity || 0)
       : t.adjustment_direction === "increase" ? Number(t.package_quantity || 0) : -Number(t.package_quantity || 0);
-    const openingUnits = runningBalances.get(t.product_id) || 0;
-    const openingPackages = runningPackageBalances.get(t.product_id) || 0;
+    const ledgerKey = t.product_id + "::" + productBookSection(product, t.control_book_section);
+    const openingUnits = runningBalances.get(ledgerKey) || 0;
+    const openingPackages = runningPackageBalances.get(ledgerKey) || 0;
     const balance = openingUnits + movement;
     const closingPackages = openingPackages + packageMovement;
-    runningBalances.set(t.product_id, balance);
-    runningPackageBalances.set(t.product_id, closingPackages);
+    runningBalances.set(ledgerKey, balance);
+    runningPackageBalances.set(ledgerKey, closingPackages);
     return { ...t, product, movement, balance, openingUnits, openingPackages, closingPackages };
   }).filter(t => (ledgerProduct === "all" || t.product_id === ledgerProduct)
     && (ledgerCategory === "all" || productBookSection(t.product, t.control_book_section) === ledgerCategory)
@@ -662,7 +668,7 @@ export default function Home() {
             <section className="data-card wide-card">
               <div className="card-heading"><div><h3>Magazine stock position</h3><p>Calculated from posted receipts, issues, returns and authorised adjustments only.</p></div><span className="role-pill">{controlBookRows.length} posted movements</span></div>
               <div className="balance-grid">
-                {controlBookBalances.map(({product,balance}) => <article className="balance-card" key={product.id}><span>{product.product_code}</span><strong>{balance.toLocaleString("en-ZA",{maximumFractionDigits:3})}</strong><small>{product.product_name} · {product.unit_of_measure}</small><em>{balance <= Number(product.minimum_stock) ? "At or below minimum stock" : "Above minimum stock"}</em></article>)}
+                {controlBookBalances.map(({product,section,balance}) => <article className="balance-card" key={product.id+"-"+section}><span>{section} · {product.product_code}</span><strong>{balance.toLocaleString("en-ZA",{maximumFractionDigits:3})}</strong><small>{product.product_name} · {product.unit_of_measure}</small><em>{balance <= Number(product.minimum_stock) ? "At or below minimum stock" : "Above minimum stock"}</em></article>)}
                 {controlBookBalances.length===0 && <div className="empty-state">Add mine-approved products to the Product Register to see their balances.</div>}
               </div>
             </section>
@@ -676,7 +682,7 @@ export default function Home() {
                 <button type="button" className="text-action" onClick={()=>{setLedgerProduct("all");setLedgerCategory("all");setLedgerFrom("");setLedgerTo("");}}>Clear filters</button>
               </div>
               <div className="info-note">This register follows MIN-DOC-0052: Boxes, Bags and Tamping. Each posted movement can retain the box/bag number, type, description, package and unit quantities, work section, miner company number, miner name and digital acknowledgement. Legacy movements remain visible; fields not captured on older records display as blank. Only posted movements affect balances.</div>
-              {controlBookEntries.length ? <div className="table-wrap"><table className="ledger-table"><thead><tr><th>DATE</th><th>BOOK REF.</th><th>SECTION / PRODUCT</th><th>BOX / BAG NO.</th><th>TYPE / DESCRIPTION</th><th>OPENING</th><th>RECEIVED</th><th>ISSUED</th><th>WORK SECTION</th><th>MINER COMPANY NO.</th><th>MINER NAME / ACKNOWLEDGEMENT</th><th>RETURNED</th><th>CLOSING</th><th>REFERENCE / NOTES</th></tr></thead><tbody>{controlBookEntries.map(t=><tr key={t.id}><td>{new Date(t.transaction_date).toLocaleDateString("en-ZA")}</td><td><b>EMS-{t.transaction_number}</b></td><td><b>{productBookSection(t.product,t.control_book_section)}</b><div className="order-subtext">{t.product?.product_name || "Product unavailable"} · {t.product?.product_code || ""}</div></td><td>{t.container_number || "—"}</td><td>{t.item_type || "—"}<div className="order-subtext">{t.item_description || ""}</div></td><td>{Number(t.openingPackages||0).toLocaleString("en-ZA")} boxes/bags · {Number(t.openingUnits||0).toLocaleString("en-ZA")} units</td><td>{t.transaction_type==="receipt" ? Number(t.package_quantity||0).toLocaleString("en-ZA")+" boxes/bags · "+Number(t.unit_quantity||0).toLocaleString("en-ZA")+" units" : "—"}</td><td>{t.transaction_type==="issue" ? Number(t.package_quantity||0).toLocaleString("en-ZA")+" boxes/bags · "+Number(t.unit_quantity||0).toLocaleString("en-ZA")+" units" : "—"}</td><td>{t.work_section || t.source_or_destination || "—"}</td><td>{t.miner_company_number || "—"}</td><td>{t.miner_name || t.issued_to || "—"}<div className="order-subtext">{t.miner_acknowledged ? "Acknowledged digitally" : "No digital acknowledgement"}</div></td><td>{t.transaction_type==="return" ? Number(t.package_quantity||0).toLocaleString("en-ZA")+" boxes/bags · "+Number(t.unit_quantity||0).toLocaleString("en-ZA")+" units" : "—"}</td><td><b>{Number(t.closingPackages||0).toLocaleString("en-ZA")} boxes/bags · {t.balance.toLocaleString("en-ZA",{maximumFractionDigits:3})} units</b></td><td>{t.reference_number || "—"}{t.purpose ? <div className="order-subtext">{t.purpose}</div> : null}{t.notes ? <div className="order-subtext">{t.notes}</div> : null}</td></tr>)}</tbody></table></div> : <div className="empty-state">No posted stock movements match these filters. Record and post a receipt, issue, return or adjustment to begin the control book.</div>}
+              {controlBookEntries.length ? <div className="table-wrap"><table className="ledger-table"><thead><tr><th>DATE</th><th>BOOK REF.</th><th>SECTION / PRODUCT</th><th>BOX / BAG NO.</th><th>TYPE / DESCRIPTION</th><th>OPENING</th><th>RECEIVED</th><th>ISSUED</th><th>WORK SECTION</th><th>MINER COMPANY NO.</th><th>MINER NAME / ACKNOWLEDGEMENT</th><th>RETURNED</th><th>ADJUSTMENT / OPENING BALANCE</th><th>CLOSING</th><th>REFERENCE / NOTES</th></tr></thead><tbody>{controlBookEntries.map(t=><tr key={t.id}><td>{new Date(t.transaction_date).toLocaleDateString("en-ZA")}</td><td><b>EMS-{t.transaction_number}</b></td><td><b>{productBookSection(t.product,t.control_book_section)}</b><div className="order-subtext">{t.product?.product_name || "Product unavailable"} · {t.product?.product_code || ""}</div></td><td>{t.container_number || "—"}</td><td>{t.item_type || "—"}<div className="order-subtext">{t.item_description || ""}</div></td><td>{Number(t.openingPackages||0).toLocaleString("en-ZA")} boxes/bags · {Number(t.openingUnits||0).toLocaleString("en-ZA")} units</td><td>{t.transaction_type==="receipt" ? Number(t.package_quantity||0).toLocaleString("en-ZA")+" boxes/bags · "+Number(t.unit_quantity||0).toLocaleString("en-ZA")+" units" : "—"}</td><td>{t.transaction_type==="issue" ? Number(t.package_quantity||0).toLocaleString("en-ZA")+" boxes/bags · "+Number(t.unit_quantity||0).toLocaleString("en-ZA")+" units" : "—"}</td><td>{t.work_section || t.source_or_destination || "—"}</td><td>{t.miner_company_number || "—"}</td><td>{t.miner_name || t.issued_to || "—"}<div className="order-subtext">{t.miner_acknowledged ? "Acknowledged digitally" : "No digital acknowledgement"}</div></td><td>{t.transaction_type==="return" ? Number(t.package_quantity||0).toLocaleString("en-ZA")+" boxes/bags · "+Number(t.unit_quantity||0).toLocaleString("en-ZA")+" units" : "—"}</td><td>{t.transaction_type==="adjustment" ? <><b>{t.adjustment_direction==="increase"&&t.openingUnits===0 ? "Opening balance: " : t.adjustment_direction==="increase" ? "Increase: " : "Decrease: "}</b>{Number(t.package_quantity||0).toLocaleString("en-ZA")} boxes/bags · {Number(t.unit_quantity||0).toLocaleString("en-ZA")} units</> : "—"}</td><td><b>{Number(t.closingPackages||0).toLocaleString("en-ZA")} boxes/bags · {t.balance.toLocaleString("en-ZA",{maximumFractionDigits:3})} units</b></td><td>{t.reference_number || "—"}{t.purpose ? <div className="order-subtext">{t.purpose}</div> : null}{t.notes ? <div className="order-subtext">{t.notes}</div> : null}</td></tr>)}</tbody></table></div> : <div className="empty-state">No posted stock movements match these filters. Record and post a receipt, issue, return or adjustment to begin the control book.</div>}
               <p className="table-footnote">Running balances are calculated in transaction date and transaction number order for each product. Records are read-only in this module; corrections must follow the authorised stock transaction process.</p>
             </section>
           </section>}
