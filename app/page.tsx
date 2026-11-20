@@ -119,7 +119,7 @@ export default function Home() {
       supabase.from("ems_stock_transactions").select("id,transaction_number,transaction_type,status,quantity,transaction_date,reference_number").order("transaction_date", { ascending: false }).limit(8),
       supabase.from("ems_daily_orders").select("id,order_number,order_date,shift,work_area,blast_site,miner_name,miner_company_number,requester_name,purpose,status,requested_by,approval_notes").order("created_at", { ascending: false }).limit(50),
       supabase.from("ems_daily_order_items").select("id,order_id,product_id,quantity_requested,quantity_approved,quantity_issued,notes").order("created_at"),
-      supabase.from("ems_stock_transactions").select("id,transaction_number,transaction_type,status,product_id,quantity,transaction_date,reference_number,source_or_destination,issued_to,purpose,notes,adjustment_direction,control_book_section,container_number,item_type,item_description,package_quantity,unit_quantity,work_section,miner_company_number,miner_name,miner_acknowledged").eq("status","posted").order("transaction_date",{ascending:true}).order("transaction_number",{ascending:true}).limit(1000),
+      Promise.resolve({data:[],error:null}),
       supabase.from("ems_purchase_orders").select("id,order_number,supplier_name,supplier_contact,supplier_email,supplier_reference,quotation_reference,order_date,required_delivery_date,work_area,purpose,requested_by,requester_name,status,supplier_order_number,submitted_at,ordered_at,created_at").order("created_at",{ascending:false}).limit(100),
       supabase.from("ems_purchase_order_items").select("id,order_id,product_id,item_description,quantity,unit_of_measure,notes").order("created_at"),
       supabase.from("ems_purchase_order_approvals").select("id,order_id,approval_stage,decision,comments,actioned_by,actioned_by_name,actioned_at").order("actioned_at"),
@@ -128,6 +128,8 @@ export default function Home() {
       supabase.from("ems_stock_transactions").select("id",{count:"exact",head:true}).eq("status","pending_approval"),
       supabase.from("ems_document_register").select("id,title,document_number,review_date,status").order("review_date",{ascending:true}).limit(300)
     ]);
+    let allPostedLedgerRows:LedgerTransaction[]=[];let ledgerOffset=0;let ledgerLoadError:string|null=null;
+    while(true){const page=await supabase.from("ems_stock_transactions").select("id,transaction_number,transaction_type,status,product_id,quantity,transaction_date,reference_number,source_or_destination,issued_to,purpose,notes,adjustment_direction,control_book_section,container_number,item_type,item_description,package_quantity,unit_quantity,work_section,miner_company_number,miner_name,miner_acknowledged").eq("status","posted").order("transaction_date",{ascending:true}).order("transaction_number",{ascending:true}).range(ledgerOffset,ledgerOffset+999);if(page.error){ledgerLoadError=page.error.message;break;}const batch=(page.data||[]) as LedgerTransaction[];allPostedLedgerRows=allPostedLedgerRows.concat(batch);if(batch.length<1000)break;ledgerOffset+=1000;}
     if (mag.error) setError("Could not load magazine details. Check the database permissions.");
     else if (mag.data) { setMagazine(mag.data as Magazine); setMagazineName(mag.data.magazine_name); setResponsibleUserId(mag.data.responsible_user_id || ""); }
     if (people.data) setProfiles(people.data as EMSProfile[]);
@@ -135,8 +137,8 @@ export default function Home() {
     if (txRows.data) setTransactions(txRows.data as Transaction[]);
     if (orderRows.data) setDailyOrders(orderRows.data as DailyOrder[]);
     if (orderItemRows.data) setDailyOrderItems(orderItemRows.data as DailyOrderItem[]);
-    if (ledgerRows.data) setControlBookRows(ledgerRows.data as LedgerTransaction[]);
-    if (ledgerRows.error) setError("The Explosives Control Book could not load posted stock movements: " + ledgerRows.error.message);
+    setControlBookRows(allPostedLedgerRows);
+    if (ledgerLoadError) setError("The Explosives Control Book could not load all posted stock movements: " + ledgerLoadError);
     if (purchaseRows.data) setPurchaseOrders(purchaseRows.data as PurchaseOrder[]);
     if (purchaseItemRows.data) setPurchaseOrderItems(purchaseItemRows.data as PurchaseOrderItem[]);
     if (approvalRows.data) setPurchaseApprovals(approvalRows.data as PurchaseApproval[]);
