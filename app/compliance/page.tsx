@@ -1,3 +1,4 @@
+import EmsPageHeader from "@/components/ems-page-header";
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
@@ -123,8 +124,8 @@ export default function CompliancePage() {
   if (!supabase) return <main style={{padding:32}}>EMS database settings are not configured.</main>;
   if (!user || !profile) return <main style={{padding:32,maxWidth:650,margin:"auto"}}><h1>Crocodile River Mine EMS</h1><p>Sign in through the main EMS dashboard first, then open the Compliance & Incident Register.</p><a href="/">Return to EMS login</a></main>;
 
-  return <main style={{minHeight:"100vh",background:"#f4f6f8",padding:24,color:"#17212b"}}>
-    <div style={{maxWidth:1240,margin:"0 auto"}}>
+  return <main className="ems-page" style={{minHeight:"100vh",background:"#f4f6f8",padding:24,color:"#17212b"}}>
+    <EmsPageHeader active="safety"/><div style={{maxWidth:1240,margin:"0 auto"}}>
       <header style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:16,flexWrap:"wrap",marginBottom:22}}>
         <div><a href="/" style={{color:"#315a75",textDecoration:"none",fontWeight:700}}>← EMS Dashboard</a><h1 style={{margin:"10px 0 4px",fontSize:30}}>Compliance & Incident Register</h1><p style={{margin:0,color:"#667085"}}>Crocodile River Mine · Signed in as {profile.full_name} · {role.replaceAll("_"," ")}</p></div>
         <img src="/crm-logo.svg" alt="Crocodile River Mine" style={{width:160,maxHeight:70,objectFit:"contain"}} />
