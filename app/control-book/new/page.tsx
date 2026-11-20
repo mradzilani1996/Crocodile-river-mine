@@ -3,7 +3,7 @@ import { FormEvent,useEffect,useMemo,useState } from "react";
 import { createClient,User } from "@supabase/supabase-js";
 
 type Profile={full_name:string;role:string;is_active:boolean};
-type Product={id:string;product_code:string;product_name:string;unit_of_measure:string;is_active:boolean};
+type Product={id:string;product_code:string;product_name:string;control_book_section:string;unit_of_measure:string;is_active:boolean};
 const field:React.CSSProperties={display:"grid",gap:6,fontSize:13,fontWeight:650,color:"#344054"};
 const control:React.CSSProperties={width:"100%",padding:"11px 12px",border:"1px solid #d5dce5",borderRadius:8,color:"#17212b",background:"white"};
 const panel:React.CSSProperties={background:"white",border:"1px solid #e3e8ef",borderRadius:14,padding:22,marginBottom:18};
@@ -15,7 +15,7 @@ export default function NewControlBookEntry(){
  const [date,setDate]=useState(new Date().toISOString().slice(0,16)),[reference,setReference]=useState(""),[container,setContainer]=useState(""),[itemType,setItemType]=useState(""),[description,setDescription]=useState("");
  const [packages,setPackages]=useState(""),[units,setUnits]=useState(""),[work,setWork]=useState(""),[companyNo,setCompanyNo]=useState(""),[miner,setMiner]=useState(""),[ack,setAck]=useState(false),[purpose,setPurpose]=useState(""),[notes,setNotes]=useState("");
  const [busy,setBusy]=useState(false),[error,setError]=useState(""),[message,setMessage]=useState("");
- useEffect(()=>{if(!db)return;db.auth.getSession().then(async({data})=>{const u=data.session?.user;if(!u)return;setUser(u);const [p,pr]=await Promise.all([db.from("ems_profiles").select("full_name,role,is_active").eq("user_id",u.id).maybeSingle(),db.from("ems_explosive_products").select("id,product_code,product_name,unit_of_measure,is_active").eq("is_active",true).order("product_name")]);if(p.data?.is_active)setProfile(p.data);else setError("Your EMS profile is inactive or unavailable.");if(pr.error)setError(pr.error.message);else{setProducts(pr.data||[]);if(pr.data?.length)setProduct(pr.data[0].id);}});},[db]);
+ useEffect(()=>{if(!db)return;db.auth.getSession().then(async({data})=>{const u=data.session?.user;if(!u)return;setUser(u);const [p,pr]=await Promise.all([db.from("ems_profiles").select("full_name,role,is_active").eq("user_id",u.id).maybeSingle(),db.from("ems_explosive_products").select("id,product_code,product_name,control_book_section,unit_of_measure,is_active").eq("is_active",true).order("product_name")]);if(p.data?.is_active)setProfile(p.data);else setError("Your EMS profile is inactive or unavailable.");if(pr.error)setError(pr.error.message);else{setProducts(pr.data||[]);if(pr.data?.length){setProduct(pr.data[0].id);setSection(pr.data[0].control_book_section||"Boxes");}}});},[db]);
  useEffect(()=>{let cancelled=false;async function loadOpening(){if(!db||!product){setOpeningUnits(0);setOpeningPackages(0);return;}setBalanceLoading(true);const {data,error}=await db.from("ems_stock_transactions").select("quantity,transaction_type,adjustment_direction,package_quantity").eq("product_id",product).eq("status","posted");if(!cancelled){if(!error){let units=0,packages=0;for(const row of data||[]){const sign=row.transaction_type==="receipt"||row.transaction_type==="return"?1:row.transaction_type==="issue"?-1:row.adjustment_direction==="increase"?1:-1;units+=sign*Number(row.quantity||0);packages+=sign*Number(row.package_quantity||0);}setOpeningUnits(units);setOpeningPackages(packages);}setBalanceLoading(false);}}loadOpening();return()=>{cancelled=true;};},[db,product]);
  const role=profile?.role||"";
  const permitted=type==="issue"?["admin","issuer"].includes(role):["admin","magazine_master"].includes(role);
@@ -36,8 +36,8 @@ export default function NewControlBookEntry(){
  <form onSubmit={submit}>
  <section style={panel}><h2>Register details</h2><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(210px,1fr))",gap:14}}>
  <label style={field}>Movement type<select style={control} value={type} onChange={e=>setType(e.target.value)}><option value="receipt">Receipt</option><option value="issue">Issue request</option><option value="return">Return</option></select></label>
- <label style={field}>Control-book section<select style={control} value={section} onChange={e=>setSection(e.target.value)}>{["Boxes","Bags","Tamping"].map(x=><option key={x}>{x}</option>)}</select></label>
- <label style={field}>Product<select required style={control} value={product} onChange={e=>setProduct(e.target.value)}><option value="">Select product</option>{products.map(p=><option key={p.id} value={p.id}>{p.product_name} ({p.product_code})</option>)}</select></label>
+ <label style={field}>Control-book section<select style={control} value={section} disabled>{["Boxes","Bags","Tamping"].map(x=><option key={x}>{x}</option>)}</select></label>
+ <label style={field}>Product<select required style={control} value={product} onChange={e=>{const id=e.target.value;setProduct(id);const selectedProduct=products.find(p=>p.id===id);if(selectedProduct)setSection(selectedProduct.control_book_section);}}><option value="">Select product</option>{products.map(p=><option key={p.id} value={p.id}>{p.product_name} ({p.product_code})</option>)}</select></label>
  <label style={field}>Date and time<input required type="datetime-local" style={control} value={date} onChange={e=>setDate(e.target.value)}/></label>
  <label style={field}>Box / bag / container number<input style={control} value={container} onChange={e=>setContainer(e.target.value)}/></label>
  <label style={field}>Item type<input style={control} value={itemType} onChange={e=>setItemType(e.target.value)} placeholder="As specified in controlled document"/></label>
