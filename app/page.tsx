@@ -342,7 +342,7 @@ export default function Home() {
       p_notes:deliveryNotes, p_lines:lines
     });
     if (deliveryError) setError("Delivery could not be recorded: " + deliveryError.message);
-    else { setNotice("Supplier delivery recorded. The order delivery status has been updated."); setDeliveryOrderId(""); setDeliveryNote(""); setDeliveryNotes(""); setDeliveryQuantities({}); await loadDashboard(); }
+    else { setNotice("Supplier delivery recorded. Registered products have generated receipt movements in the stock approval queue. Stock balances will increase after authorisation and Magazine Master posting."); setDeliveryOrderId(""); setDeliveryNote(""); setDeliveryNotes(""); setDeliveryQuantities({}); await loadDashboard(); }
     setBusy(false);
   }
 
