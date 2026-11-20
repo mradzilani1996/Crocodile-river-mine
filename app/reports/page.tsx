@@ -1,0 +1,150 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { createClient, User } from "@supabase/supabase-js";
+
+type Row = Record<string, any>;
+type ReportKey = "balances" | "movements" | "daily" | "deliveries" | "incidents" | "inspections";
+
+const styles: Record<string, React.CSSProperties> = {
+  card: { background: "#fff", border: "1px solid #e4e8ee", borderRadius: 14, padding: 18, marginBottom: 16 },
+  label: { display: "grid", gap: 6, fontSize: 13, fontWeight: 650, color: "#344054" },
+  input: { width: "100%", padding: "10px 12px", border: "1px solid #d7dde5", borderRadius: 8, background: "#fff", color: "#17212b" },
+  button: { border: 0, borderRadius: 8, padding: "10px 14px", background: "#173b57", color: "#fff", fontWeight: 700, cursor: "pointer" },
+  secondary: { border: "1px solid #cbd5df", borderRadius: 8, padding: "10px 14px", background: "#fff", color: "#173b57", fontWeight: 700, cursor: "pointer" }
+};
+
+const today = new Date().toLocaleDateString("en-CA");
+const reportLabels: Record<ReportKey, string> = {
+  balances: "Current stock balances",
+  movements: "Stock movement register",
+  daily: "Daily explosive requests",
+  deliveries: "Supplier deliveries",
+  incidents: "Incident register",
+  inspections: "Inspection register"
+};
+
+export default function ReportsPage() {
+  const db = useMemo(() => {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+    return url && key ? createClient(url, key) : null;
+  }, []);
+  const [user, setUser] = useState<User | null>(null);
+  const [report, setReport] = useState<ReportKey>("balances");
+  const [products, setProducts] = useState<Row[]>([]);
+  const [movements, setMovements] = useState<Row[]>([]);
+  const [daily, setDaily] = useState<Row[]>([]);
+  const [deliveries, setDeliveries] = useState<Row[]>([]);
+  const [incidents, setIncidents] = useState<Row[]>([]);
+  const [inspections, setInspections] = useState<Row[]>([]);
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState(today);
+  const [section, setSection] = useState("All registers");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!db) { setError("The reporting service is not configured."); setLoading(false); return; }
+    let alive = true;
+    const loadAll = async () => {
+      setLoading(true); setError("");
+      const { data: auth } = await db.auth.getUser();
+      if (!alive) return;
+      setUser(auth.user);
+      if (!auth.user) { setError("Please sign in to view EMS reports."); setLoading(false); return; }
+      const [p, d, dl, de, i, ins] = await Promise.all([
+        db.from("ems_explosive_products").select("*").order("product_name"),
+        db.from("ems_stock_transactions").select("*").order("transaction_date", { ascending: true }).order("transaction_number", { ascending: true }).range(0, 999),
+        db.from("ems_daily_orders").select("*").order("order_date", { ascending: false }).range(0, 999),
+        db.from("ems_purchase_deliveries").select("*").order("received_date", { ascending: false }).range(0, 999),
+        db.from("ems_incidents").select("*").order("created_at", { ascending: false }).range(0, 999),
+        db.from("ems_inspections").select("*").order("inspection_date", { ascending: false }).range(0, 999)
+      ]);
+      if (!alive) return;
+      const failed = [p, d, dl, de, i, ins].find(x => x.error);
+      if (failed?.error) setError("Some reports could not be loaded: " + failed.error.message);
+      setProducts(p.data || []); setMovements(d.data || []); setDaily(dl.data || []);
+      setDeliveries(de.data || []); setIncidents(i.data || []); setInspections(ins.data || []);
+      setLoading(false);
+    };
+    loadAll();
+    return () => { alive = false; };
+  }, [db]);
+
+  const balances = useMemo(() => {
+    const grouped = new Map<string, Row>();
+    for (const tx of movements) {
+      if (tx.status !== "posted") continue;
+      const product = products.find(p => p.id === tx.product_id);
+      if (!product) continue;
+      const register = tx.control_book_section || product.control_book_section || "Unassigned";
+      const key = product.id + "|" + register;
+      const current = grouped.get(key) || { product_id: product.id, product_code: product.product_code, product_name: product.product_name, unit: product.unit_of_measure, register, units: 0, packages: 0, minimum: Number(product.minimum_stock || 0) };
+      const sign = tx.transaction_type === "receipt" || tx.transaction_type === "return" || (tx.transaction_type === "adjustment" && tx.adjustment_direction === "increase") ? 1 : -1;
+      current.units += sign * Number(tx.unit_quantity ?? tx.quantity ?? 0);
+      current.packages += sign * Number(tx.package_quantity ?? 0);
+      grouped.set(key, current);
+    }
+    for (const p of products) {
+      const register = p.control_book_section || "Unassigned";
+      const key = p.id + "|" + register;
+      if (!grouped.has(key)) grouped.set(key, { product_id: p.id, product_code: p.product_code, product_name: p.product_name, unit: p.unit_of_measure, register, units: 0, packages: 0, minimum: Number(p.minimum_stock || 0) });
+    }
+    return Array.from(grouped.values()).sort((a,b) => String(a.product_name).localeCompare(String(b.product_name)) || String(a.register).localeCompare(String(b.register)));
+  }, [movements, products]);
+
+  const source = report === "balances" ? balances : report === "movements" ? movements : report === "daily" ? daily : report === "deliveries" ? deliveries : report === "incidents" ? incidents : inspections;
+  const dateField: Record<ReportKey, string> = { balances: "", movements: "transaction_date", daily: "order_date", deliveries: "received_date", incidents: "created_at", inspections: "inspection_date" };
+  const rows = useMemo(() => source.filter(row => {
+    if (report === "balances") return section === "All registers" || row.register === section;
+    const raw = row[dateField[report]];
+    if (!raw) return true;
+    const date = String(raw).slice(0,10);
+    return (!fromDate || date >= fromDate) && (!toDate || date <= toDate);
+  }), [source, report, section, fromDate, toDate]);
+
+  const columns: Record<ReportKey, { key: string; label: string }[]> = {
+    balances: [{key:"product_code",label:"Product code"},{key:"product_name",label:"Product"},{key:"register",label:"Register"},{key:"units",label:"Balance"},{key:"unit",label:"Unit"},{key:"packages",label:"Packages"},{key:"minimum",label:"Minimum stock"}],
+    movements: [{key:"transaction_number",label:"Reference"},{key:"transaction_date",label:"Date"},{key:"transaction_type",label:"Movement"},{key:"product_id",label:"Product ID"},{key:"control_book_section",label:"Register"},{key:"unit_quantity",label:"Units"},{key:"package_quantity",label:"Packages"},{key:"status",label:"Status"},{key:"reference_number",label:"Document reference"}],
+    daily: [{key:"order_date",label:"Date"},{key:"shift",label:"Shift"},{key:"work_section",label:"Work area"},{key:"miner_name",label:"Miner"},{key:"miner_company_number",label:"Company number"},{key:"status",label:"Status"}],
+    deliveries: [{key:"received_date",label:"Received date"},{key:"supplier_delivery_note",label:"Delivery note"},{key:"order_id",label:"Purchase order"},{key:"received_by_name",label:"Received by"},{key:"notes",label:"Notes"}],
+    incidents: [{key:"created_at",label:"Reported"},{key:"incident_type",label:"Type"},{key:"severity",label:"Severity"},{key:"location",label:"Location"},{key:"description",label:"Description"},{key:"status",label:"Status"}],
+    inspections: [{key:"inspection_date",label:"Date"},{key:"inspection_type",label:"Inspection"},{key:"location",label:"Location"},{key:"findings",label:"Findings"},{key:"non_conformances",label:"Non-conformances"},{key:"status",label:"Status"}]
+  };
+
+  const cell = (value: any) => value === null || value === undefined || value === "" ? "—" : typeof value === "object" ? JSON.stringify(value) : String(value);
+  const exportCsv = () => {
+    const cols = columns[report];
+    const quote = (v: any) => '"' + cell(v).replaceAll('"','""') + '"';
+    const csv = [cols.map(c => quote(c.label)).join(","), ...rows.map(r => cols.map(c => quote(r[c.key])).join(","))].join("\r\n");
+    const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = "crm-ems-" + report + "-" + today + ".csv"; a.click(); URL.revokeObjectURL(url);
+  };
+
+  if (!user && !loading && !error) return <main style={{padding:32}}>Please sign in to view reports.</main>;
+  return <main style={{ maxWidth: 1500, margin: "0 auto", padding: "28px 24px", color: "#17212b" }}>
+    <style>{`@media print { .report-controls,.no-print { display:none !important; } body { background:#fff !important; } main { max-width:none !important; padding:0 !important; } table { font-size:10px !important; } th,td { padding:6px !important; } }`}</style>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:16,flexWrap:"wrap",marginBottom:20}}>
+      <div><div style={{fontSize:12,fontWeight:800,letterSpacing:1.5,color:"#64748b"}}>CROCODILE RIVER MINE / EMS</div><h1 style={{fontSize:28,margin:"7px 0"}}>Reports</h1><p style={{margin:0,color:"#64748b"}}>View, filter, print and export official system records.</p></div>
+      <div className="no-print" style={{display:"flex",gap:8}}><button style={styles.secondary} onClick={()=>window.print()}>Print report</button><button style={styles.button} onClick={exportCsv}>Export CSV</button></div>
+    </div>
+    <section className="report-controls" style={styles.card}>
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:16}}>
+        {(Object.keys(reportLabels) as ReportKey[]).map(k=><button key={k} onClick={()=>setReport(k)} style={{...styles.secondary,background:report===k?"#173b57":"#fff",color:report===k?"#fff":"#173b57"}}>{reportLabels[k]}</button>)}
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:12}}>
+        <label style={styles.label}>From date<input type="date" style={styles.input} value={fromDate} onChange={e=>setFromDate(e.target.value)} disabled={report==="balances"}/></label>
+        <label style={styles.label}>To date<input type="date" style={styles.input} value={toDate} onChange={e=>setToDate(e.target.value)} disabled={report==="balances"}/></label>
+        <label style={styles.label}>Register<select style={styles.input} value={section} onChange={e=>setSection(e.target.value)} disabled={report!=="balances"}><option>All registers</option><option>Boxes</option><option>Bags</option><option>Tamping</option><option>Unassigned</option></select></label>
+      </div>
+    </section>
+    <section style={styles.card}>
+      <div style={{display:"flex",justifyContent:"space-between",gap:12,flexWrap:"wrap",alignItems:"center",marginBottom:14}}><div><h2 style={{fontSize:19,margin:"0 0 5px"}}>{reportLabels[report]}</h2><p style={{margin:0,color:"#64748b",fontSize:13}}>{rows.length} records · {report==="balances"?"Balances are calculated from posted movements only.":"Date filters apply to the selected report."}</p></div><span style={{fontSize:12,color:"#64748b"}}>Generated {new Date().toLocaleString("en-ZA")}</span></div>
+      {loading ? <p>Loading report records…</p> : error ? <p style={{color:"#b42318"}}>{error}</p> : rows.length===0 ? <p style={{padding:24,textAlign:"center",color:"#64748b"}}>No records found for this report and date range.</p> :
+      <div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}><thead><tr>{columns[report].map(c=><th key={c.key} style={{textAlign:"left",padding:10,background:"#f3f6f9",borderBottom:"1px solid #dbe2e9",whiteSpace:"nowrap"}}>{c.label}</th>)}</tr></thead><tbody>{rows.map((r,i)=><tr key={r.id||r.product_id||i}>{columns[report].map(c=><td key={c.key} style={{padding:10,borderBottom:"1px solid #edf0f3",verticalAlign:"top"}}>{cell(r[c.key])}</td>)}</tr>)}</tbody></table></div>}
+    </section>
+    <p style={{fontSize:12,color:"#64748b"}}>Reports reflect records available to your signed-in EMS account. Stock balances exclude pending and rejected movements.</p>
+  </main>;
+}
