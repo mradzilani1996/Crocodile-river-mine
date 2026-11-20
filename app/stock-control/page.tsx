@@ -14,10 +14,13 @@ export default function StockControlPage(){
  const [comment,setComment]=useState<Record<string,string>>({}),[tab,setTab]=useState(()=>typeof window!=="undefined"&&new URLSearchParams(window.location.search).get("tab")==="audit"?"audit":"movement"),[filter,setFilter]=useState("all"),[busy,setBusy]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState("");
  async function load(){if(!db)return;const [p,t,d]=await Promise.all([
   db.from("ems_explosive_products").select("id,product_code,product_name,control_book_section,unit_of_measure,minimum_stock,is_active,approval_status").eq("is_active",true).eq("approval_status","approved").order("product_name"),
-  db.from("ems_stock_transactions").select("*,ems_explosive_products(product_code,product_name,unit_of_measure)").order("transaction_date",{ascending:false}).limit(1000),
+  Promise.resolve({data:[],error:null}),
   db.from("ems_document_register").select("id,document_number,title,review_date,status").order("review_date",{ascending:true}).limit(300)
- ]);if(p.error||t.error||d.error)setError(p.error?.message||t.error?.message||d.error?.message||"Could not load records.");
- setProducts(p.data||[]);setRows(t.data||[]);setDocs(d.data||[]);
+ ]);if(p.error||d.error)setError(p.error?.message||d.error?.message||"Could not load records.");
+ let allTransactions:AnyRow[]=[];let offset=0;let transactionError:string|null=null;
+ while(true){const page=await db.from("ems_stock_transactions").select("*,ems_explosive_products(product_code,product_name,unit_of_measure)").order("transaction_date",{ascending:true}).order("transaction_number",{ascending:true}).range(offset,offset+999);if(page.error){transactionError=page.error.message;break;}const batch=page.data||[];allTransactions=allTransactions.concat(batch);if(batch.length<1000)break;offset+=1000;}
+ if(transactionError)setError("Stock movements could not be fully loaded: "+transactionError);
+ setProducts(p.data||[]);setRows(allTransactions);setDocs(d.data||[]);
  if(["admin","management"].includes(profile?.role||"")){const a=await db.from("ems_audit_log").select("id,actor_user_id,actor_name,action,table_name,record_id,old_data,new_data,occurred_at").order("occurred_at",{ascending:false}).limit(300);if(a.error)setError(a.error.message);setAudit(a.data||[]);}
  }
  useEffect(()=>{if(!db)return;db.auth.getSession().then(async({data})=>{const u=data.session?.user;if(!u)return;setUser(u);const {data:p,error:e}=await db.from("ems_profiles").select("full_name,role,is_active").eq("user_id",u.id).maybeSingle();if(e||!p?.is_active){setError(e?.message||"Active EMS profile not found.");return;}setProfile(p);});},[db]);
