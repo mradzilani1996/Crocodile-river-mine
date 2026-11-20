@@ -10,6 +10,7 @@ type Transaction = { id: string; transaction_number: number; transaction_type: s
 type Product = { id: string; product_code: string; product_name: string; unit_of_measure: string; minimum_stock: number; is_active: boolean };
 type DailyOrder = { id: string; order_number: number; order_date: string; shift: string; work_area: string; blast_site: string | null; requester_name: string; purpose: string; status: string; requested_by: string; approval_notes: string | null };
 type DailyOrderItem = { id: string; order_id: string; product_id: string; quantity_requested: number; quantity_approved: number | null; quantity_issued: number; notes: string | null };
+type LedgerTransaction = { id: string; transaction_number: number; transaction_type: string; status: string; product_id: string; quantity: number; transaction_date: string; reference_number: string | null; source_or_destination: string | null; issued_to: string | null; purpose: string | null; notes: string | null; adjustment_direction: string };
 
 export default function Home() {
   const supabase = useMemo(() => {
@@ -35,6 +36,10 @@ export default function Home() {
   const [profiles, setProfiles] = useState<EMSProfile[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [controlBookRows, setControlBookRows] = useState<LedgerTransaction[]>([]);
+  const [ledgerProduct, setLedgerProduct] = useState("all");
+  const [ledgerFrom, setLedgerFrom] = useState("");
+  const [ledgerTo, setLedgerTo] = useState("");
   const [dailyOrders, setDailyOrders] = useState<DailyOrder[]>([]);
   const [dailyOrderItems, setDailyOrderItems] = useState<DailyOrderItem[]>([]);
   const [orderDate, setOrderDate] = useState(new Date().toISOString().slice(0, 10));
@@ -61,13 +66,14 @@ export default function Home() {
   async function loadDashboard() {
     if (!supabase) return;
     setDataLoading(true); setError("");
-    const [mag, people, productRows, txRows, orderRows, orderItemRows] = await Promise.all([
+    const [mag, people, productRows, txRows, orderRows, orderItemRows, ledgerRows] = await Promise.all([
       supabase.from("ems_magazine").select("magazine_name,responsible_user_id,is_active").eq("singleton", true).maybeSingle(),
       supabase.from("ems_profiles").select("user_id,full_name,email,role,is_active").order("full_name"),
       supabase.from("ems_explosive_products").select("id,product_code,product_name,unit_of_measure,minimum_stock,is_active").order("product_name"),
       supabase.from("ems_stock_transactions").select("id,transaction_number,transaction_type,status,quantity,transaction_date,reference_number").order("transaction_date", { ascending: false }).limit(8),
       supabase.from("ems_daily_orders").select("id,order_number,order_date,shift,work_area,blast_site,requester_name,purpose,status,requested_by,approval_notes").order("created_at", { ascending: false }).limit(50),
-      supabase.from("ems_daily_order_items").select("id,order_id,product_id,quantity_requested,quantity_approved,quantity_issued,notes").order("created_at")
+      supabase.from("ems_daily_order_items").select("id,order_id,product_id,quantity_requested,quantity_approved,quantity_issued,notes").order("created_at"),
+      supabase.from("ems_stock_transactions").select("id,transaction_number,transaction_type,status,product_id,quantity,transaction_date,reference_number,source_or_destination,issued_to,purpose,notes,adjustment_direction").eq("status","posted").order("transaction_date",{ascending:true}).order("transaction_number",{ascending:true}).limit(1000)
     ]);
     if (mag.error) setError("Could not load magazine details. Check the database permissions.");
     else if (mag.data) { setMagazine(mag.data as Magazine); setMagazineName(mag.data.magazine_name); setResponsibleUserId(mag.data.responsible_user_id || ""); }
@@ -76,6 +82,8 @@ export default function Home() {
     if (txRows.data) setTransactions(txRows.data as Transaction[]);
     if (orderRows.data) setDailyOrders(orderRows.data as DailyOrder[]);
     if (orderItemRows.data) setDailyOrderItems(orderItemRows.data as DailyOrderItem[]);
+    if (ledgerRows.data) setControlBookRows(ledgerRows.data as LedgerTransaction[]);
+    if (ledgerRows.error) setError("The Explosives Control Book could not load posted stock movements: " + ledgerRows.error.message);
     setDataLoading(false);
   }
 
@@ -189,6 +197,29 @@ export default function Home() {
   const canApproveOrders = profile?.role === "admin" || profile?.role === "authorising_officer";
   const canFulfilOrders = profile?.role === "admin" || profile?.role === "magazine_master" || profile?.role === "issuer";
   const roleName = (profile?.role || "").replaceAll("_", " ");
+  const controlBookBalances = activeProducts.map(p => ({
+    product: p,
+    balance: controlBookRows.filter(t => t.product_id === p.id).reduce((sum,t) => {
+      const amount = Number(t.quantity);
+      if (t.transaction_type === "receipt" || t.transaction_type === "return") return sum + amount;
+      if (t.transaction_type === "issue") return sum - amount;
+      return sum + (t.adjustment_direction === "increase" ? amount : -amount);
+    }, 0)
+  }));
+  const runningBalances = new Map<string, number>();
+  const controlBookEntries = controlBookRows.map(t => {
+    const product = products.find(p => p.id === t.product_id);
+    const movement = t.transaction_type === "receipt" || t.transaction_type === "return"
+      ? Number(t.quantity)
+      : t.transaction_type === "issue" ? -Number(t.quantity)
+      : t.adjustment_direction === "increase" ? Number(t.quantity) : -Number(t.quantity);
+    const balance = (runningBalances.get(t.product_id) || 0) + movement;
+    runningBalances.set(t.product_id, balance);
+    return { ...t, product, movement, balance };
+  }).filter(t => (ledgerProduct === "all" || t.product_id === ledgerProduct)
+    && (!ledgerFrom || t.transaction_date.slice(0,10) >= ledgerFrom)
+    && (!ledgerTo || t.transaction_date.slice(0,10) <= ledgerTo))
+    .reverse();
 
   if (authChecking) return <main className="shell login-shell"><div className="hero"><div className="eyebrow">CROCODILE RIVER MINE</div><h1>Explosives <em>Management</em></h1><p className="intro">Checking your secure EMS session…</p></div></main>;
 
@@ -249,10 +280,11 @@ export default function Home() {
         <button className={section === "products" ? "nav-item active" : "nav-item"} onClick={() => setSection("products")}>▤ <span>Product register</span></button>
         <button className={section === "transactions" ? "nav-item active" : "nav-item"} onClick={() => setSection("transactions")}>⇄ <span>Stock records</span></button>
         <button className={section === "daily-orders" ? "nav-item active" : "nav-item"} onClick={() => setSection("daily-orders")}>▧ <span>Daily order sheet</span></button>
+        <button className={section === "control-book" ? "nav-item active" : "nav-item"} onClick={() => setSection("control-book")}>▤ <span>Explosives control book</span></button>
         <div className="side-bottom"><div className="user-chip"><span className="avatar">{(profile?.full_name || "A").slice(0,1).toUpperCase()}</span><div><strong>{profile?.full_name || user?.email || "EMS user"}</strong><small>{roleName}</small></div></div><button className="signout" onClick={signOut}>Sign out ↗</button></div>
       </aside>
       <section className="main-area">
-        <header className="app-top"><div><span className="crumb">CROCODILE RIVER MINE / EMS</span><h1>{section === "overview" ? "Dashboard" : section === "magazine" ? "Magazine management" : section === "people" ? "User profiles" : section === "products" ? "Product register" : section === "daily-orders" ? "Daily explosive order sheet" : "Stock records"}</h1></div><div className="top-right"><span className="status-dot"></span> System online <button onClick={loadDashboard} className="refresh-btn">↻ Refresh</button></div></header>
+        <header className="app-top"><div><span className="crumb">CROCODILE RIVER MINE / EMS</span><h1>{section === "overview" ? "Dashboard" : section === "magazine" ? "Magazine management" : section === "people" ? "User profiles" : section === "products" ? "Product register" : section === "daily-orders" ? "Daily explosive order sheet" : section === "control-book" ? "Explosives control book" : "Stock records"}</h1></div><div className="top-right"><span className="status-dot"></span> System online <button onClick={loadDashboard} className="refresh-btn">↻ Refresh</button></div></header>
         <div className="content">
           {notice && <div className="notice success-notice">{notice}</div>}
           {error && <div className="notice error-notice">{error}</div>}
@@ -269,7 +301,7 @@ export default function Home() {
               <section className="data-card"><div className="card-heading"><div><h3>Recent stock records</h3><p>Latest recorded movements and their current status.</p></div><button className="text-action" onClick={() => setSection("transactions")}>View records →</button></div>
                 {transactions.length ? <div className="table-wrap"><table><thead><tr><th>REFERENCE</th><th>TYPE</th><th>DATE</th><th>STATUS</th></tr></thead><tbody>{transactions.map(t=><tr key={t.id}><td>EMS-{t.transaction_number}</td><td className="capitalize">{t.transaction_type}</td><td>{new Date(t.transaction_date).toLocaleDateString("en-ZA")}</td><td><span className={"state "+t.status}>{t.status.replaceAll("_"," ")}</span></td></tr>)}</tbody></table></div> : <div className="empty-state">No stock transactions have been recorded yet.</div>}
               </section>
-              <section className="data-card quick-card"><div className="card-heading"><div><h3>System shortcuts</h3><p>Manage core EMS setup.</p></div></div><button onClick={() => setSection("magazine")} className="shortcut">▣ <span><b>Magazine configuration</b><small>View the main magazine and responsible person</small></span> →</button><button onClick={() => setSection("people")} className="shortcut">♙ <span><b>User profiles</b><small>Review assigned roles and account status</small></span> →</button><button onClick={() => setSection("products")} className="shortcut">▤ <span><b>Product register</b><small>View registered product records</small></span> →</button><button onClick={() => setSection("daily-orders")} className="shortcut">▧ <span><b>Daily explosive order</b><small>Submit and track daily requirements</small></span> →</button></section>
+              <section className="data-card quick-card"><div className="card-heading"><div><h3>System shortcuts</h3><p>Manage core EMS setup.</p></div></div><button onClick={() => setSection("magazine")} className="shortcut">▣ <span><b>Magazine configuration</b><small>View the main magazine and responsible person</small></span> →</button><button onClick={() => setSection("people")} className="shortcut">♙ <span><b>User profiles</b><small>Review assigned roles and account status</small></span> →</button><button onClick={() => setSection("products")} className="shortcut">▤ <span><b>Product register</b><small>View registered product records</small></span> →</button><button onClick={() => setSection("daily-orders")} className="shortcut">▧ <span><b>Daily explosive order</b><small>Submit and track daily requirements</small></span> →</button><button onClick={() => setSection("control-book")} className="shortcut">▤ <span><b>Explosives control book</b><small>Review the posted magazine ledger and balances</small></span> →</button></section>
             </div>
           </>}
           {section === "magazine" && <section className="data-card wide-card"><div className="card-heading"><div><h3>Main magazine configuration</h3><p>Maintain the system record and assign the responsible Magazine Master.</p></div><span className="state approved"> {magazine?.is_active ? "Active" : "Inactive"} </span></div>
@@ -301,6 +333,27 @@ export default function Home() {
             </section>
             <section className="data-card wide-card"><div className="card-heading"><div><h3>Daily order register</h3><p>Submitted requests and their approval / fulfilment progress.</p></div><span className="role-pill">{dailyOrders.length} records</span></div>
               {dailyOrders.length ? <div className="table-wrap"><table><thead><tr><th>ORDER</th><th>DATE / SHIFT</th><th>REQUESTED BY</th><th>WORK AREA</th><th>STATUS</th><th>ACTION</th></tr></thead><tbody>{dailyOrders.map(o=><tr key={o.id}><td><b>{"DO-"+o.order_number}</b><div className="order-subtext">{dailyOrderItems.filter(i=>i.order_id===o.id).map(i=>{const p=products.find(x=>x.id===i.product_id);return (p?.product_name||"Product")+": "+i.quantity_requested+" "+(p?.unit_of_measure||"");}).join(" · ")}</div></td><td>{new Date(o.order_date+"T00:00:00").toLocaleDateString("en-ZA")}<div className="order-subtext">{o.shift} shift</div></td><td>{o.requester_name}</td><td>{o.work_area}{o.blast_site ? <div className="order-subtext">{o.blast_site}</div> : null}</td><td><span className={"state "+(o.status==="approved"?"approved":o.status==="rejected"?"rejected":o.status==="fulfilled"?"posted":"pending_approval")}>{o.status}</span></td><td>{canApproveOrders && o.status==="submitted" && <span className="action-pair"><button className="mini-action" disabled={busy} onClick={()=>updateDailyOrder(o,"approve")}>Approve</button><button className="mini-action danger" disabled={busy} onClick={()=>updateDailyOrder(o,"reject")}>Reject</button></span>}{canFulfilOrders && o.status==="approved" && <button className="mini-action" disabled={busy} onClick={()=>updateDailyOrder(o,"fulfil")}>Mark fulfilled</button>}{(!canApproveOrders || o.status!=="submitted") && (!canFulfilOrders || o.status!=="approved") && <span className="order-subtext">—</span>}</td></tr>)}</tbody></table></div> : <div className="empty-state">No daily explosive orders have been submitted yet.</div>}
+            </section>
+          </section>}
+          {section === "control-book" && <section className="control-book-layout">
+            <section className="data-card wide-card">
+              <div className="card-heading"><div><h3>Magazine stock position</h3><p>Calculated from posted receipts, issues, returns and authorised adjustments only.</p></div><span className="role-pill">{controlBookRows.length} posted movements</span></div>
+              <div className="balance-grid">
+                {controlBookBalances.map(({product,balance}) => <article className="balance-card" key={product.id}><span>{product.product_code}</span><strong>{balance.toLocaleString("en-ZA",{maximumFractionDigits:3})}</strong><small>{product.product_name} · {product.unit_of_measure}</small><em>{balance <= Number(product.minimum_stock) ? "At or below minimum stock" : "Above minimum stock"}</em></article>)}
+                {controlBookBalances.length===0 && <div className="empty-state">Add mine-approved products to the Product Register to see their balances.</div>}
+              </div>
+            </section>
+            <section className="data-card wide-card">
+              <div className="card-heading"><div><h3>Explosives control book</h3><p>Chronological, read-only register of posted magazine movements.</p></div><button className="text-action" type="button" onClick={()=>window.print()}>Print control book ↗</button></div>
+              <div className="ledger-filters">
+                <label>Product<select value={ledgerProduct} onChange={e=>setLedgerProduct(e.target.value)}><option value="all">All products</option>{activeProducts.map(p=><option key={p.id} value={p.id}>{p.product_code} — {p.product_name}</option>)}</select></label>
+                <label>From date<input type="date" value={ledgerFrom} onChange={e=>setLedgerFrom(e.target.value)} /></label>
+                <label>To date<input type="date" value={ledgerTo} onChange={e=>setLedgerTo(e.target.value)} /></label>
+                <button type="button" className="text-action" onClick={()=>{setLedgerProduct("all");setLedgerFrom("");setLedgerTo("");}}>Clear filters</button>
+              </div>
+              <div className="info-note">Only transactions with status “posted” affect these balances. Pending, approved-but-not-posted and rejected transactions are excluded. Daily order fulfilment currently records order status only; it does not automatically post a stock issue.</div>
+              {controlBookEntries.length ? <div className="table-wrap"><table className="ledger-table"><thead><tr><th>DATE / TIME</th><th>BOOK REF.</th><th>PRODUCT</th><th>MOVEMENT</th><th>IN</th><th>OUT</th><th>RUNNING BALANCE</th><th>REFERENCE / DETAILS</th></tr></thead><tbody>{controlBookEntries.map(t=><tr key={t.id}><td>{new Date(t.transaction_date).toLocaleString("en-ZA")}</td><td><b>EMS-{t.transaction_number}</b></td><td>{t.product?.product_name || "Product unavailable"}<div className="order-subtext">{t.product?.product_code || ""}</div></td><td className="capitalize">{t.transaction_type}{t.transaction_type==="adjustment" ? " ("+t.adjustment_direction+")" : ""}</td><td>{t.movement>0 ? t.movement.toLocaleString("en-ZA") : "—"}</td><td>{t.movement<0 ? Math.abs(t.movement).toLocaleString("en-ZA") : "—"}</td><td><b>{t.balance.toLocaleString("en-ZA",{maximumFractionDigits:3})}</b></td><td>{t.reference_number || "—"}{t.source_or_destination ? <div className="order-subtext">{t.source_or_destination}</div> : null}{t.issued_to ? <div className="order-subtext">Issued to: {t.issued_to}</div> : null}{t.purpose ? <div className="order-subtext">{t.purpose}</div> : null}</td></tr>)}</tbody></table></div> : <div className="empty-state">No posted stock movements match these filters. Record and post a receipt, issue, return or adjustment to begin the control book.</div>}
+              <p className="table-footnote">Running balances are calculated in transaction date and transaction number order for each product. Records are read-only in this module; corrections must follow the authorised stock transaction process.</p>
             </section>
           </section>}
           {section === "transactions" && <section className="data-card wide-card"><div className="card-heading"><div><h3>Stock transaction records</h3><p>Recorded receipts, issues, returns and adjustments. This view is read-only.</p></div><span className="role-pill">Latest 8 records</span></div>{transactions.length ? <div className="table-wrap"><table><thead><tr><th>REFERENCE</th><th>TYPE</th><th>DATE</th><th>QUANTITY</th><th>STATUS</th></tr></thead><tbody>{transactions.map(t=><tr key={t.id}><td>EMS-{t.transaction_number}</td><td className="capitalize">{t.transaction_type}</td><td>{new Date(t.transaction_date).toLocaleString("en-ZA")}</td><td>{t.quantity}</td><td><span className={"state "+t.status}>{t.status.replaceAll("_"," ")}</span></td></tr>)}</tbody></table></div> : <div className="empty-state">No stock transaction records are available yet.</div>}</section>}
