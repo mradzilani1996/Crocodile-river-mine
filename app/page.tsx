@@ -558,6 +558,7 @@ export default function Home() {
         <button className={section === "control-book" ? "nav-item active" : "nav-item"} onClick={() => setSection("control-book")}>▤ <span>Stock book</span></button>
         <button className={section === "ordering" ? "nav-item active" : "nav-item"} onClick={() => setSection("ordering")}>▧ <span>Supplier orders</span></button>
         <button className={section === "deliveries" ? "nav-item active" : "nav-item"} onClick={() => setSection("deliveries")}>⇩ <span>Receive delivery</span></button>
+        <a className="nav-item" href="/reports">▤ <span>Reports</span></a>
         <a className="nav-item" href="/compliance">✓ <span>Safety & reports</span></a>
         <a className="nav-item" href="/operations">⇄ <span>Magazine tasks</span></a>
         <a className="nav-item" href="/control-book/new">▤ <span>Add stock entry</span></a>
