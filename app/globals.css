@@ -240,3 +240,32 @@ td{font-size:12px;padding:15px 11px;line-height:1.45}
 /* Restore the exact Eastplats mine background image requested */
 .login-shell{background-image:linear-gradient(90deg,rgba(2,27,12,.88) 0%,rgba(3,39,17,.72) 48%,rgba(3,30,13,.58) 100%),url("https://www.eastplats.com/wp-content/uploads/2022/04/EPL-120410-0003-e1651233738448.jpg")!important;background-position:center 45%!important;background-size:cover!important;background-repeat:no-repeat!important}
 @media(max-width:650px){.login-shell{background-attachment:scroll!important}}
+
+
+/* Explosives and accessories supplier ordering */
+.purchase-orders-layout{display:grid;gap:20px}
+.purchase-order-list{display:grid;gap:16px}
+.purchase-order-card{border:1px solid #dfe7df;border-radius:8px;background:#fbfdfb;padding:20px;display:grid;gap:15px}
+.purchase-order-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px}
+.purchase-order-head h4{margin:6px 0 4px;font:600 19px 'Space Grotesk';color:#123d22}
+.purchase-order-head p{margin:0;font-size:12px;color:#69786c}
+.purchase-order-meta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.purchase-order-meta span{display:grid;gap:5px;padding:10px;background:#f1f6f1;border-radius:5px;font-size:11px;color:#405344;overflow-wrap:anywhere}
+.purchase-order-meta b{font-size:9px;text-transform:uppercase;letter-spacing:.7px;color:#718073}
+.purchase-purpose{font-size:12px;line-height:1.6;color:#536456;margin:0}
+.purchase-history{display:grid;gap:8px;padding-top:12px;border-top:1px solid #e2eae2}
+.purchase-history>b{font-size:12px;color:#1b4828}
+.purchase-history-row{display:grid;grid-template-columns:minmax(100px,1fr) auto;gap:4px 12px;font-size:11px;color:#435548}
+.purchase-history-row span:nth-child(2){font-weight:700;text-transform:capitalize}
+.purchase-history-row small{grid-column:1/-1;color:#79867a;font-size:10px;line-height:1.45}
+.purchase-actions{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;padding-top:12px;border-top:1px solid #e2eae2}
+.purchase-actions>label,.inline-order-form label{display:grid;gap:6px;min-width:220px;flex:1;font-size:11px;font-weight:700;color:#435346}
+.purchase-actions input,.inline-order-form input{width:100%;padding:10px 12px;border:1px solid #d5dfd5;border-radius:5px;background:#fff;color:#1e3023;font:inherit}
+.purchase-actions>small{width:100%;font-size:10px;color:#7b887d}
+.inline-order-form{width:100%;display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap}
+.purchase-line{grid-template-columns:1.1fr 1.2fr .55fr .7fr 1fr auto}
+.delivery-form{width:100%;padding:15px;background:#f5f8f4;border:1px solid #dfe7df;border-radius:6px}
+.delivery-form h4{margin:0;color:#123d22;font:600 15px 'Space Grotesk'}
+.delivery-form>label{display:grid;gap:7px}
+@media(max-width:950px){.purchase-order-meta{grid-template-columns:repeat(2,minmax(0,1fr))}.purchase-line{grid-template-columns:1fr 1fr}.purchase-line label:first-child{grid-column:auto}}
+@media(max-width:600px){.purchase-order-card{padding:14px}.purchase-order-head{align-items:flex-start}.purchase-order-head h4{font-size:16px}.purchase-order-meta{grid-template-columns:1fr 1fr}.purchase-line{grid-template-columns:1fr}.purchase-actions{align-items:stretch}.purchase-actions>label{min-width:100%}.inline-order-form{align-items:stretch;flex-direction:column}.purchase-history-row{grid-template-columns:1fr auto}}
