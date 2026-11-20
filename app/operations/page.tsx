@@ -1,3 +1,4 @@
+import EmsPageHeader from "@/components/ems-page-header";
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
@@ -86,7 +87,7 @@ export default function OperationsPage() {
 
   if(!supabase)return <main style={{padding:30}}>EMS database settings are not configured.</main>;
   if(!user||!profile)return <main style={{padding:30,maxWidth:680,margin:"auto"}}><h1>Crocodile River Mine EMS</h1><p>Sign in through the main EMS dashboard to access operational registers.</p><a href="/">Return to EMS login</a></main>;
-  return <main style={{minHeight:"100vh",background:"#f4f6f8",padding:24,color:"#17212b"}}><div style={{maxWidth:1250,margin:"auto"}}>
+  return <main className="ems-page" style={{minHeight:"100vh",background:"#f4f6f8",padding:24,color:"#17212b"}}><EmsPageHeader active="operations"/><div style={{maxWidth:1250,margin:"auto"}}>
     <header style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:16,flexWrap:"wrap",marginBottom:22}}><div><a href="/" style={{color:"#315a75",fontWeight:700,textDecoration:"none"}}>← EMS Dashboard</a><h1 style={{margin:"10px 0 4px",fontSize:30}}>Magazine Operations</h1><p style={{margin:0,color:"#667085"}}>Crocodile River Mine · {profile.full_name} · {role.replaceAll("_"," ")}</p></div><img src="/crm-logo.svg" alt="Crocodile River Mine" style={{width:155,maxHeight:68,objectFit:"contain"}}/></header>
     {error&&<p role="alert" style={{background:"#fff0f0",color:"#9b2424",padding:12,borderRadius:8}}>{error}</p>}{message&&<p style={{background:"#eaf6ef",color:"#17633a",padding:12,borderRadius:8}}>{message}</p>}
     <nav style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:18}}>{[["handover","Shift handover"],["stocktake","Stock reconciliation"],["access","Magazine access log"]].map(([v,l])=><button key={v} onClick={()=>setTab(v)} style={{...btn,background:tab===v?"#173b57":"#e6ebf0",color:tab===v?"#fff":"#243746"}}>{l}</button>)}</nav>
