@@ -212,10 +212,10 @@ td{font-size:12px;padding:15px 11px;line-height:1.45}
 .balance-card>strong{font-size:28px;line-height:1.15;color:#123d22;font-variant-numeric:tabular-nums}
 .balance-card>small{font-size:11px;color:#5f6d61;line-height:1.45}
 .balance-card>em{font-size:10px;font-style:normal;color:#6c792d;font-weight:700}
-.ledger-filters{display:grid;grid-template-columns:minmax(190px,1.5fr) minmax(145px,1fr) minmax(145px,1fr) auto;gap:12px;align-items:end;margin:5px 0 17px}
+.ledger-filters{display:grid;grid-template-columns:minmax(160px,1.1fr) minmax(190px,1.5fr) minmax(130px,1fr) minmax(130px,1fr) auto;gap:12px;align-items:end;margin:5px 0 17px}
 .ledger-filters label{display:flex;flex-direction:column;gap:7px;font-size:11px;font-weight:700;color:#435346}
 .ledger-filters input,.ledger-filters select{width:100%;min-height:42px;padding:10px 11px;border:1px solid #d5dfd5;border-radius:5px;background:#fff;color:#1e3023;font:inherit}
-.ledger-table{min-width:950px}
+.ledger-table{min-width:1450px}
 .ledger-table td{vertical-align:top}
 .ledger-table td:nth-child(5){color:#176a36;font-weight:700}
 .ledger-table td:nth-child(6){color:#a04432;font-weight:700}
