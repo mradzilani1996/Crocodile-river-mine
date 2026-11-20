@@ -329,7 +329,8 @@ export default function Home() {
       return sum + (t.adjustment_direction === "increase" ? amount : -amount);
     }, 0)
   }));
-  const productBookSection = (product?: Product) => {
+  const productBookSection = (product?: Product, recordedSection?: string | null) => {
+    if (recordedSection && ["Boxes","Bags","Tamping"].includes(recordedSection)) return recordedSection;
     const label = `${product?.product_code || ""} ${product?.product_name || ""}`.toLowerCase();
     if (/tamp/.test(label)) return "Tamping";
     if (/bag/.test(label)) return "Bags";
