@@ -138,7 +138,7 @@ export default function Home() {
   const canManageMagazine = profile?.role === "admin";
   const roleName = (profile?.role || "").replaceAll("_", " ");
 
-  if (authChecking) return <main className="shell"><div className="hero"><div className="eyebrow">CROCODILE RIVER MINE</div><h1>Explosives <em>Management</em></h1><p className="intro">Checking your secure EMS session…</p></div></main>;
+  if (authChecking) return <main className="shell login-shell"><div className="hero"><div className="eyebrow">CROCODILE RIVER MINE</div><h1>Explosives <em>Management</em></h1><p className="intro">Checking your secure EMS session…</p></div></main>;
 
   if (!user || !profile) return (
     <main className="shell">
