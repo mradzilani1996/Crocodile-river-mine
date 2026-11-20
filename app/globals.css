@@ -235,3 +235,8 @@ td{font-size:12px;padding:15px 11px;line-height:1.45}
   .balance-card>strong{font-size:18px}
   .info-note{border:1px solid #bbb!important;background:#fff!important}
 }
+
+
+/* Restore the exact Eastplats mine background image requested */
+.login-shell{background-image:linear-gradient(90deg,rgba(2,27,12,.88) 0%,rgba(3,39,17,.72) 48%,rgba(3,30,13,.58) 100%),url("https://www.eastplats.com/wp-content/uploads/2022/04/EPL-120410-0003-e1651233738448.jpg")!important;background-position:center 45%!important;background-size:cover!important;background-repeat:no-repeat!important}
+@media(max-width:650px){.login-shell{background-attachment:scroll!important}}
