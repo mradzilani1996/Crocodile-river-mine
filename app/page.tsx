@@ -425,6 +425,7 @@ export default function Home() {
         <button className={section === "ordering" ? "nav-item active" : "nav-item"} onClick={() => setSection("ordering")}>▧ <span>Explosives & accessories ordering</span></button>
         <a className="nav-item" href="/compliance">✓ <span>Compliance & incident register</span></a>
         <a className="nav-item" href="/operations">⇄ <span>Magazine operations</span></a>
+        <a className="nav-item" href="/stock-control">▣ <span>Stock management & approvals</span></a>
         <a className="nav-item" href="/control-book/new">▤ <span>New Control Book Entry</span></a>
         <div className="side-bottom"><div className="user-chip"><span className="avatar">{(profile?.full_name || "A").slice(0,1).toUpperCase()}</span><div><strong>{profile?.full_name || user?.email || "EMS user"}</strong><small>{roleName}</small></div></div><button className="signout" onClick={signOut}>Sign out ↗</button></div>
       </aside>
