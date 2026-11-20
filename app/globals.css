@@ -192,3 +192,23 @@ td b{color:#193c24}
 }
 .login-shell .login-video{display:none!important}
 @media(max-width:650px){.login-shell{background-attachment:scroll!important}}
+
+
+/* Daily explosive order sheet */
+.daily-orders-layout{display:grid;gap:22px}
+.order-form{display:grid;gap:17px}
+.order-form label,.order-line label{display:grid;gap:7px;font-size:11px;font-weight:650;color:#435247}
+.order-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}
+.order-form input,.order-form select,.order-form textarea,.order-line input,.order-line select{width:100%;min-width:0;border:1px solid #d6dfd7;border-radius:5px;background:#fff;padding:12px 13px;color:#1c2c20;font:inherit;font-size:13px}
+.order-form textarea{resize:vertical;line-height:1.55}
+.order-lines-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:5px}
+.order-lines-heading h4{margin:0;color:#123c20;font-size:14px}
+.order-line{display:grid;grid-template-columns:minmax(180px,1.3fr) minmax(110px,.55fr) minmax(160px,1fr) auto;gap:12px;align-items:end;padding:14px;background:#f5f8f4;border:1px solid #e1e8e1;border-radius:6px}
+.remove-line{border:0;background:transparent;color:#a43b32;font-size:11px;font-weight:700;padding:10px 4px;cursor:pointer}
+.order-subtext{font-size:10px;color:#718075;margin-top:4px;line-height:1.5;max-width:280px}
+.action-pair{display:flex;gap:5px}
+.mini-action{border:0;border-radius:4px;background:#0b5429;color:#fff;padding:7px 9px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap}
+.mini-action:disabled{opacity:.55;cursor:not-allowed}
+.mini-action.danger{background:#a43b32}
+@media(max-width:850px){.order-line{grid-template-columns:1fr 1fr}.order-line label:first-child{grid-column:1/-1}}
+@media(max-width:600px){.order-fields,.order-line{grid-template-columns:1fr}.order-line label:first-child{grid-column:auto}.order-lines-heading{align-items:flex-start;flex-direction:column}.action-pair{flex-wrap:wrap}}
