@@ -182,3 +182,13 @@ td b{color:#193c24}
 .login-shell>.topbar,.login-shell>.hero,.login-shell>.features,.login-shell>footer{position:relative;z-index:2}
 @media(max-width:650px){.login-shell .login-video iframe{opacity:.55;min-width:220vh}}
 @media(prefers-reduced-motion:reduce){.login-shell .login-video{display:none}}
+
+
+/* Use the requested Eastplats mine photograph instead of the video background */
+.login-shell{
+ background:
+  linear-gradient(90deg,rgba(2,27,12,.88) 0%,rgba(3,39,17,.72) 48%,rgba(3,30,13,.58) 100%),
+  url("https://www.eastplats.com/wp-content/uploads/2022/04/EPL-120410-0003-e1651233738448-2000x1080.jpg") center 45%/cover fixed!important;
+}
+.login-shell .login-video{display:none!important}
+@media(max-width:650px){.login-shell{background-attachment:scroll!important}}
