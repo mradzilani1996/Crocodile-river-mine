@@ -427,7 +427,11 @@ export default function Home() {
   const activeProducts = products.filter(p => p.is_active && p.approval_status === "approved");
   const canManageProducts = profile?.role === "admin" || profile?.role === "magazine_master";
   const canApproveProducts = profile?.role === "admin" || profile?.role === "authorising_officer" || profile?.role === "management";
-  const pending = pendingMovementCount;
+  const pendingStock = pendingMovementCount;
+  const pendingDaily = dailyOrders.filter(o => o.status === "submitted").length;
+  const pendingProducts = products.filter(p => p.approval_status === "pending_approval").length;
+  const pendingSupplierOrders = purchaseOrders.filter(o => ["pending_shift_boss","pending_magazine_master","pending_mine_overseer"].includes(o.status)).length;
+  const pending = pendingStock + pendingDaily + pendingProducts + pendingSupplierOrders;
   const canManageMagazine = profile?.role === "admin";
   const canApproveOrders = profile?.role === "admin" || profile?.role === "authorising_officer";
   const canFulfilOrders = profile?.role === "admin" || profile?.role === "magazine_master" || profile?.role === "issuer";
@@ -568,7 +572,7 @@ export default function Home() {
               <article className="stat-card"><span>ACTIVE MAGAZINE</span><strong className="stat-text">{magazine?.is_active ? "Operational record" : "Inactive"}</strong><small>{magazine?.magazine_name || "Magazine not configured"}</small></article>
               <article className="stat-card"><span>REGISTERED PRODUCTS</span><strong>{activeProducts.length}</strong><small>Active product records</small></article>
               <article className="stat-card"><span>ACTIVE USERS</span><strong>{activePeople.length}</strong><small>Authorised EMS profiles</small></article>
-              <article className="stat-card"><span>AWAITING APPROVAL</span><strong>{pending}</strong><small>Transactions pending review</small></article>
+              <article className="stat-card"><span>AWAITING APPROVAL</span><strong>{pending}</strong><small>Stock, daily requests, products and supplier orders</small></article>
               <article className="stat-card"><span>LOW STOCK ALERTS</span><strong>{lowStockProducts.length}</strong><small>Products at or below minimum</small></article>
               <article className="stat-card"><span>DOCUMENT REVIEWS</span><strong>{dueDocumentReviews.length}</strong><small>Due or due within 30 days</small></article>
             </div>
@@ -588,7 +592,7 @@ export default function Home() {
                 <div>
                   <h4>Document reviews</h4>
                   {dueDocumentReviews.length ? dueDocumentReviews.map(d=><div className="purchase-history-row" key={d.id}><b>{d.document_number} · {d.title}</b><small>Review date: {d.review_date ? new Date(d.review_date+"T00:00:00").toLocaleDateString("en-ZA") : "Not set"}</small></div>) : <p className="muted">No document reviews are due within the next 30 days.</p>}
-                  <p className="muted">Pending stock approvals: <b>{pending}</b></p>
+                  <p className="muted">Pending stock movements: <b>{pendingStock}</b></p><p className="muted">Daily requests awaiting approval: <b>{pendingDaily}</b></p><p className="muted">Product approvals: <b>{pendingProducts}</b></p><p className="muted">Supplier order approvals: <b>{pendingSupplierOrders}</b></p>
                 </div>
               </div>
             </section>
