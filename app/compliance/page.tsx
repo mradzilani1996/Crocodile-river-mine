@@ -89,7 +89,7 @@ export default function CompliancePage() {
       setMessage("Document and register entry saved successfully.");
       setDocument({ document_number:"", title:"", document_type:"Controlled document", effective_date:"", review_date:"" });
       setDocumentFile(null);
-      const picker = document.getElementById("controlled-document-file") as HTMLInputElement | null;
+      const picker = window.document.getElementById("controlled-document-file") as HTMLInputElement | null;
       if (picker) picker.value = "";
       await load();
     }
