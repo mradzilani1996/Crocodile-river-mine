@@ -7,7 +7,7 @@ type Profile = { full_name: string; email: string; role: string; is_active: bool
 type Magazine = { magazine_name: string; responsible_user_id: string | null; is_active: boolean };
 type EMSProfile = { user_id: string; full_name: string; email: string; role: string; is_active: boolean };
 type Transaction = { id: string; transaction_number: number; transaction_type: string; status: string; quantity: number; transaction_date: string; reference_number: string | null };
-type Product = { id: string; product_code: string; product_name: string; unit_of_measure: string; minimum_stock: number; is_active: boolean };
+type Product = { id: string; product_code: string; product_name: string; unit_of_measure: string; minimum_stock: number; is_active: boolean; approval_status: string; submitted_by: string | null; approved_by: string | null; approved_at: string | null; approval_notes: string | null };
 type DailyOrder = { id: string; order_number: number; order_date: string; shift: string; work_area: string; blast_site: string | null; requester_name: string; purpose: string; status: string; requested_by: string; approval_notes: string | null };
 type DailyOrderItem = { id: string; order_id: string; product_id: string; quantity_requested: number; quantity_approved: number | null; quantity_issued: number; notes: string | null };
 type LedgerTransaction = { id: string; transaction_number: number; transaction_type: string; status: string; product_id: string; quantity: number; transaction_date: string; reference_number: string | null; source_or_destination: string | null; issued_to: string | null; purpose: string | null; notes: string | null; adjustment_direction: string; control_book_section: string | null; container_number: string | null; item_type: string | null; item_description: string | null; package_quantity: number; unit_quantity: number; work_section: string | null; miner_company_number: string | null; miner_name: string | null; miner_acknowledged: boolean };
@@ -40,6 +40,11 @@ export default function Home() {
   const [responsibleUserId, setResponsibleUserId] = useState("");
   const [profiles, setProfiles] = useState<EMSProfile[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [productCode, setProductCode] = useState("");
+  const [productName, setProductName] = useState("");
+  const [productUnit, setProductUnit] = useState("units");
+  const [productMinimum, setProductMinimum] = useState("0");
+  const [productNotes, setProductNotes] = useState("");
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [pendingMovementCount, setPendingMovementCount] = useState(0);
   const [documentReviewRows, setDocumentReviewRows] = useState<{id:string;title:string;document_number:string;review_date:string|null;status:string}[]>([]);
@@ -100,7 +105,7 @@ export default function Home() {
     const [mag, people, productRows, txRows, orderRows, orderItemRows, ledgerRows, purchaseRows, purchaseItemRows, approvalRows, deliveryRows, deliveryItemRows, pendingRows, docRows] = await Promise.all([
       supabase.from("ems_magazine").select("magazine_name,responsible_user_id,is_active").eq("singleton", true).maybeSingle(),
       supabase.from("ems_profiles").select("user_id,full_name,email,role,is_active").order("full_name"),
-      supabase.from("ems_explosive_products").select("id,product_code,product_name,unit_of_measure,minimum_stock,is_active").order("product_name"),
+      supabase.from("ems_explosive_products").select("id,product_code,product_name,unit_of_measure,minimum_stock,is_active,approval_status,submitted_by,approved_by,approved_at,approval_notes").order("product_name"),
       supabase.from("ems_stock_transactions").select("id,transaction_number,transaction_type,status,quantity,transaction_date,reference_number").order("transaction_date", { ascending: false }).limit(8),
       supabase.from("ems_daily_orders").select("id,order_number,order_date,shift,work_area,blast_site,requester_name,purpose,status,requested_by,approval_notes").order("created_at", { ascending: false }).limit(50),
       supabase.from("ems_daily_order_items").select("id,order_id,product_id,quantity_requested,quantity_approved,quantity_issued,notes").order("created_at"),
@@ -196,6 +201,33 @@ export default function Home() {
     }).eq("singleton", true);
     if (saveError) setError("Magazine details could not be saved: " + saveError.message);
     else { setNotice("Magazine configuration saved."); await loadDashboard(); }
+    setBusy(false);
+  }
+
+  async function addExplosiveProduct(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!supabase || !user || !canManageProducts) return;
+    setBusy(true); setError(""); setNotice("");
+    const { error: insertError } = await supabase.from("ems_explosive_products").insert({
+      product_code: productCode.trim(), product_name: productName.trim(), unit_of_measure: productUnit.trim(),
+      minimum_stock: Number(productMinimum), is_active: false, approval_status: "pending_approval",
+      submitted_by: user.id, created_by: user.id, approval_notes: productNotes.trim() || null
+    });
+    if (insertError) setError("Product could not be submitted: " + insertError.message);
+    else { setNotice("Product submitted for mine authorisation. It will only be available for stock movements after approval."); setProductCode(""); setProductName(""); setProductUnit("units"); setProductMinimum("0"); setProductNotes(""); await loadDashboard(); }
+    setBusy(false);
+  }
+
+  async function reviewExplosiveProduct(product: Product, decision: "approved" | "rejected") {
+    if (!supabase || !user || !canApproveProducts) return;
+    if (product.submitted_by === user.id) { setError("A product must be approved by someone other than the person who submitted it."); return; }
+    setBusy(true); setError(""); setNotice("");
+    const { error: reviewError } = await supabase.from("ems_explosive_products").update({
+      approval_status: decision, approved_by: user.id, approved_at: new Date().toISOString(),
+      approval_notes: productNotes.trim() || product.approval_notes || null, is_active: decision === "approved"
+    }).eq("id", product.id).eq("approval_status", "pending_approval");
+    if (reviewError) setError("Product decision could not be saved: " + reviewError.message);
+    else { setNotice(decision === "approved" ? "Product approved and made available for authorised stock movements." : "Product rejected and kept unavailable for stock movements."); setProductNotes(""); await loadDashboard(); }
     setBusy(false);
   }
 
@@ -315,7 +347,9 @@ export default function Home() {
   }
 
   const activePeople = profiles.filter(p => p.is_active);
-  const activeProducts = products.filter(p => p.is_active);
+  const activeProducts = products.filter(p => p.is_active && p.approval_status === "approved");
+  const canManageProducts = profile?.role === "admin" || profile?.role === "magazine_master";
+  const canApproveProducts = profile?.role === "admin" || profile?.role === "authorising_officer" || profile?.role === "management";
   const pending = pendingMovementCount;
   const canManageMagazine = profile?.role === "admin";
   const canApproveOrders = profile?.role === "admin" || profile?.role === "authorising_officer";
