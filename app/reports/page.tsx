@@ -1,5 +1,5 @@
-import EmsPageHeader from "@/components/ems-page-header";
 "use client";
+import EmsPageHeader from "@/components/ems-page-header";
 
 import { useEffect, useMemo, useState } from "react";
 import { createClient, User } from "@supabase/supabase-js";
