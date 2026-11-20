@@ -1,3 +1,4 @@
+import EmsPageHeader from "@/components/ems-page-header";
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -139,7 +140,7 @@ export default function ReportsPage() {
   };
 
   if (!user && !loading && !error) return <main style={{padding:32}}>Please sign in to view reports.</main>;
-  return <main style={{ maxWidth: 1500, margin: "0 auto", padding: "28px 24px", color: "#17212b" }}>
+  return <main className="ems-page" style={{ maxWidth: 1500, margin: "0 auto", padding: "28px 24px", color: "#17212b" }}><EmsPageHeader active="reports"/>
     <style>{`@media print { .report-controls,.no-print { display:none !important; } body { background:#fff !important; } main { max-width:none !important; padding:0 !important; } table { font-size:10px !important; } th,td { padding:6px !important; } }`}</style>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:16,flexWrap:"wrap",marginBottom:20}}>
       <div><div style={{fontSize:12,fontWeight:800,letterSpacing:1.5,color:"#64748b"}}>CROCODILE RIVER MINE / EMS</div><h1 style={{fontSize:28,margin:"7px 0"}}>Reports</h1><p style={{margin:0,color:"#64748b"}}>View, filter, print and export official system records.</p></div>
