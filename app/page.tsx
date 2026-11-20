@@ -264,6 +264,34 @@ export default function Home() {
     setBusy(false);
   }
 
+  async function inviteEMSUser(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!supabase || profile?.role !== "admin") return;
+    setBusy(true); setError(""); setNotice("");
+    const { data, error: inviteError } = await supabase.functions.invoke("ems-admin-invite-user", {
+      body: { full_name: inviteFullName.trim(), email: inviteEmail.trim(), role: inviteRole }
+    });
+    if (inviteError || data?.error) {
+      setError("Staff invitation could not be sent: " + (inviteError?.message || data?.error || "Unknown error"));
+    } else {
+      setNotice("Invitation sent to " + inviteEmail.trim() + ". The staff member must use the email link to set their password.");
+      setInviteFullName(""); setInviteEmail(""); setInviteRole("issuer");
+      await loadDashboard();
+    }
+    setBusy(false);
+  }
+
+  async function updateEMSUser(person: EMSProfile, patch: Partial<Pick<EMSProfile,"role"|"is_active">>) {
+    if (!supabase || profile?.role !== "admin" || person.user_id === user?.id) return;
+    if (patch.role === "admin") { setError("Administrator access cannot be assigned from this screen."); return; }
+    if (patch.is_active === false && !window.confirm("Deactivate " + person.full_name + "? They will no longer be able to sign in to the EMS.")) return;
+    setBusy(true); setError(""); setNotice("");
+    const { error: updateError } = await supabase.from("ems_profiles").update(patch).eq("user_id", person.user_id);
+    if (updateError) setError("Staff access could not be updated: " + updateError.message);
+    else { setNotice("Staff access updated for " + person.full_name + "."); await loadDashboard(); }
+    setBusy(false);
+  }
+
   async function updateDailyOrder(order: DailyOrder, action: "approve" | "reject" | "fulfil") {
     if (!supabase || !user) return;
     setBusy(true); setError(""); setNotice("");
@@ -583,7 +611,7 @@ export default function Home() {
               <div className="table-wrap"><table><thead><tr><th>NAME</th><th>EMAIL</th><th>ROLE</th><th>ACCESS</th></tr></thead><tbody>{profiles.map(p=><tr key={p.user_id}>
                 <td><b>{p.full_name}</b>{p.user_id===user?.id?<div className="order-subtext">Your administrator account</div>:null}</td>
                 <td>{p.email}</td>
-                <td>{p.user_id===user?.id?<span className="capitalize">{p.role.replaceAll("_"," ")}</span>:<select value={p.role} disabled={busy} onChange={e=>updateEMSUser(p,{role:e.target.value})}><option value="issuer">Issuer</option><option value="magazine_master">Magazine Master</option><option value="authorising_officer">Authorising Officer</option><option value="management">Management</option><option value="admin">Administrator</option></select>}</td>
+                <td>{p.user_id===user?.id?<span className="capitalize">{p.role.replaceAll("_"," ")}</span>:<select value={p.role} disabled={busy} onChange={e=>updateEMSUser(p,{role:e.target.value})}><option value="issuer">Issuer</option><option value="magazine_master">Magazine Master</option><option value="authorising_officer">Authorising Officer</option><option value="management">Management</option></select>}</td>
                 <td>{p.user_id===user?.id?<span className="state approved">Active</span>:<button type="button" className="mini-action" disabled={busy} onClick={()=>updateEMSUser(p,{is_active:!p.is_active})}>{p.is_active?"Deactivate":"Reactivate"}</button>}</td>
               </tr>)}</tbody></table></div>
               <p className="table-footnote">Only the system administrator can manage staff accounts. Role and access changes are recorded in the activity history.</p>
