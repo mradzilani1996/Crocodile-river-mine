@@ -46,6 +46,7 @@ export default function Home() {
   const [productSection, setProductSection] = useState("Boxes");
   const [productMinimum, setProductMinimum] = useState("0");
   const [productNotes, setProductNotes] = useState("");
+  const [editingProductId, setEditingProductId] = useState("");
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [pendingMovementCount, setPendingMovementCount] = useState(0);
   const [documentReviewRows, setDocumentReviewRows] = useState<{id:string;title:string;document_number:string;review_date:string|null;status:string}[]>([]);
@@ -227,6 +228,47 @@ export default function Home() {
     });
     if (insertError) setError("Product could not be submitted: " + insertError.message);
     else { setNotice("Product submitted for mine authorisation. It will only be available for stock movements after approval."); setProductCode(""); setProductName(""); setProductSection("Boxes"); setProductUnit("units"); setProductMinimum("0"); setProductNotes(""); await loadDashboard(); }
+    setBusy(false);
+  }
+
+  function beginEditProduct(product: Product) {
+    setEditingProductId(product.id);
+    setProductCode(product.product_code);
+    setProductName(product.product_name);
+    setProductSection(product.control_book_section || "Boxes");
+    setProductUnit(product.unit_of_measure || "units");
+    setProductMinimum(String(product.minimum_stock ?? 0));
+    setProductNotes(product.approval_notes || "");
+  }
+
+  async function saveProductChanges(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!supabase || !user || !canManageProducts || !editingProductId) return;
+    setBusy(true); setError(""); setNotice("");
+    const { error: updateError } = await supabase.from("ems_explosive_products").update({
+      product_code: productCode.trim(),
+      product_name: productName.trim(),
+      control_book_section: productSection,
+      unit_of_measure: productUnit.trim(),
+      minimum_stock: Number(productMinimum),
+      approval_notes: productNotes.trim() || null
+    }).eq("id", editingProductId);
+    if (updateError) setError("Product details could not be saved: " + updateError.message);
+    else {
+      setNotice("Product details updated. The change is recorded in the audit trail.");
+      setEditingProductId(""); setProductCode(""); setProductName(""); setProductSection("Boxes");
+      setProductUnit("units"); setProductMinimum("0"); setProductNotes("");
+      await loadDashboard();
+    }
+    setBusy(false);
+  }
+
+  async function setProductActive(product: Product, active: boolean) {
+    if (!supabase || !user || !canManageProducts) return;
+    setBusy(true); setError(""); setNotice("");
+    const { error: updateError } = await supabase.from("ems_explosive_products").update({ is_active: active }).eq("id", product.id);
+    if (updateError) setError("Product status could not be changed: " + updateError.message);
+    else { setNotice(active ? "Product reactivated." : "Product deactivated. Existing stock history has been retained."); await loadDashboard(); }
     setBusy(false);
   }
 
@@ -427,7 +469,8 @@ export default function Home() {
 
   const activePeople = profiles.filter(p => p.is_active);
   const activeProducts = products.filter(p => p.is_active && p.approval_status === "approved");
-  const canManageProducts = profile?.role === "admin" || profile?.role === "magazine_master";
+  const isAppointedMagazineMaster = profile?.role === "magazine_master" && magazine?.responsible_user_id === user?.id;
+  const canManageProducts = profile?.role === "admin" || isAppointedMagazineMaster;
   const canApproveProducts = profile?.role === "admin" || profile?.role === "authorising_officer" || profile?.role === "management";
   const pendingStock = pendingMovementCount;
   const pendingDaily = dailyOrders.filter(o => o.status === "submitted").length;
@@ -626,8 +669,9 @@ export default function Home() {
             </> : <div className="empty-state">Only the System Administrator can manage EMS staff accounts.</div>}
           </section>}
           {section === "products" && <>
-            {canManageProducts && <section className="data-card wide-card"><div className="card-heading"><div><h3>Add explosive product</h3><p>Magazine Master or System Administrator submits a product for mine authorisation.</p></div><span className="state pending_approval">Approval required</span></div><form className="order-form" onSubmit={addExplosiveProduct}><div className="order-fields"><label>Product code<input value={productCode} onChange={e=>setProductCode(e.target.value)} placeholder="Mine-approved product code" required /></label><label>Product name<input value={productName} onChange={e=>setProductName(e.target.value)} placeholder="Exact approved product name" required /></label><label>Register<select value={productSection} onChange={e=>setProductSection(e.target.value)} required><option value="Boxes">Boxes register</option><option value="Bags">Bags register</option><option value="Tamping">Tamping register</option></select></label><label>Unit of measure<select value={productUnit} onChange={e=>setProductUnit(e.target.value)}><option value="units">Units</option><option value="boxes">Boxes</option><option value="bags">Bags</option><option value="cases">Cases</option><option value="kg">Kilograms (kg)</option><option value="metres">Metres</option></select></label><label>Minimum stock reference<input type="number" min="0" step="0.001" value={productMinimum} onChange={e=>setProductMinimum(e.target.value)} required /></label></div><label>Supporting note / mine register reference<textarea rows={2} value={productNotes} onChange={e=>setProductNotes(e.target.value)} placeholder="Reference the approved product list or supporting document" /></label><div className="info-note">Use only the exact product name, code and unit shown on the mine-approved explosives register. Submission does not make the product available for stock transactions until an authorised approver approves it.</div><button className="primary-btn" disabled={busy}>{busy ? "Submitting…" : "Submit product for approval"}</button></form></section>}
-            <section className="data-card wide-card"><div className="card-heading"><div><h3>Explosive product register</h3><p>Approved product records and minimum-stock reference values. Pending products are excluded from stock transactions.</p></div><span className="role-pill">{activeProducts.length} approved active</span></div>{products.length ? <div className="table-wrap"><table><thead><tr><th>PRODUCT CODE</th><th>PRODUCT NAME</th><th>REGISTER</th><th>UNIT</th><th>MINIMUM STOCK</th><th>APPROVAL</th><th>STATUS / ACTION</th></tr></thead><tbody>{products.map(p=><tr key={p.id}><td>{p.product_code}</td><td><b>{p.product_name}</b>{p.approval_notes?<div className="order-subtext">{p.approval_notes}</div>:null}</td><td>{p.control_book_section || "Not assigned"}</td><td>{p.unit_of_measure}</td><td>{p.minimum_stock}</td><td><span className={"state "+(p.approval_status==="approved"?"approved":p.approval_status==="rejected"?"rejected":"pending_approval")}>{(p.approval_status||"approved").replaceAll("_"," ")}</span>{p.approved_at?<div className="order-subtext">{new Date(p.approved_at).toLocaleDateString("en-ZA")}</div>:null}</td><td>{p.approval_status==="pending_approval" && canApproveProducts && p.submitted_by!==user?.id ? <span className="action-pair"><button type="button" className="mini-action" disabled={busy} onClick={()=>reviewExplosiveProduct(p,"approved")}>Approve</button><button type="button" className="mini-action danger" disabled={busy} onClick={()=>reviewExplosiveProduct(p,"rejected")}>Reject</button></span> : <span className={"state "+(p.is_active?"approved":"rejected")}>{p.is_active?"Active":"Inactive"}</span>}</td></tr>)}</tbody></table></div> : <div className="empty-state">No mine-approved product records have been entered yet. The Magazine Master can submit products using the form above.</div>}{!canManageProducts && !canApproveProducts && <p className="table-footnote">Your role can view the approved product register but cannot add or approve products.</p>}</section>
+            {canManageProducts && <section className="data-card wide-card"><div className="card-heading"><div><h3>Add explosive product</h3><p>The appointed Magazine Master or System Administrator manages the product register. New products still require independent mine authorisation.</p></div><span className="state pending_approval">Approval required</span></div><form className="order-form" onSubmit={addExplosiveProduct}><div className="order-fields"><label>Product code<input value={productCode} onChange={e=>setProductCode(e.target.value)} placeholder="Mine-approved product code" required /></label><label>Product name<input value={productName} onChange={e=>setProductName(e.target.value)} placeholder="Exact approved product name" required /></label><label>Register<select value={productSection} onChange={e=>setProductSection(e.target.value)} required><option value="Boxes">Boxes register</option><option value="Bags">Bags register</option><option value="Tamping">Tamping register</option></select></label><label>Unit of measure<select value={productUnit} onChange={e=>setProductUnit(e.target.value)}><option value="units">Units</option><option value="boxes">Boxes</option><option value="bags">Bags</option><option value="cases">Cases</option><option value="kg">Kilograms (kg)</option><option value="metres">Metres</option></select></label><label>Minimum stock reference<input type="number" min="0" step="0.001" value={productMinimum} onChange={e=>setProductMinimum(e.target.value)} required /></label></div><label>Supporting note / mine register reference<textarea rows={2} value={productNotes} onChange={e=>setProductNotes(e.target.value)} placeholder="Reference the approved product list or supporting document" /></label><div className="info-note">Use only the exact product name, code and unit shown on the mine-approved explosives register. Submission does not make the product available for stock transactions until an authorised approver approves it.</div><button className="primary-btn" disabled={busy}>{busy ? "Submitting…" : "Submit product for approval"}</button></form></section>}
+            {editingProductId && canManageProducts && <section className="data-card wide-card"><div className="card-heading"><div><h3>Edit product details</h3><p>Changes are saved to the product register and audit trail. Approval history is retained.</p></div><span className="state approved">Editing</span></div><form className="order-form" onSubmit={saveProductChanges}><div className="order-fields"><label>Product code<input value={productCode} onChange={e=>setProductCode(e.target.value)} required /></label><label>Product name<input value={productName} onChange={e=>setProductName(e.target.value)} required /></label><label>Register<select value={productSection} onChange={e=>setProductSection(e.target.value)} required><option value="Boxes">Boxes register</option><option value="Bags">Bags register</option><option value="Tamping">Tamping register</option></select></label><label>Unit of measure<select value={productUnit} onChange={e=>setProductUnit(e.target.value)}><option value="units">Units</option><option value="boxes">Boxes</option><option value="bags">Bags</option><option value="cases">Cases</option><option value="kg">Kilograms (kg)</option><option value="metres">Metres</option></select></label><label>Minimum stock reference<input type="number" min="0" step="0.001" value={productMinimum} onChange={e=>setProductMinimum(e.target.value)} required /></label></div><label>Product notes / register reference<textarea rows={2} value={productNotes} onChange={e=>setProductNotes(e.target.value)} /></label><div className="action-pair"><button className="primary-btn" disabled={busy}>{busy ? "Saving…" : "Save product changes"}</button><button type="button" className="mini-action danger" disabled={busy} onClick={()=>{setEditingProductId("");setProductCode("");setProductName("");setProductSection("Boxes");setProductUnit("units");setProductMinimum("0");setProductNotes("");}}>Cancel</button></div></form></section>}
+            <section className="data-card wide-card"><div className="card-heading"><div><h3>Explosive product register</h3><p>Approved product records and minimum-stock reference values. Pending products are excluded from stock transactions.</p></div><span className="role-pill">{activeProducts.length} approved active</span></div>{products.length ? <div className="table-wrap"><table><thead><tr><th>PRODUCT CODE</th><th>PRODUCT NAME</th><th>REGISTER</th><th>UNIT</th><th>MINIMUM STOCK</th><th>APPROVAL</th><th>STATUS / ACTION</th></tr></thead><tbody>{products.map(p=><tr key={p.id}><td>{p.product_code}</td><td><b>{p.product_name}</b>{p.approval_notes?<div className="order-subtext">{p.approval_notes}</div>:null}</td><td>{p.control_book_section || "Not assigned"}</td><td>{p.unit_of_measure}</td><td>{p.minimum_stock}</td><td><span className={"state "+(p.approval_status==="approved"?"approved":p.approval_status==="rejected"?"rejected":"pending_approval")}>{(p.approval_status||"approved").replaceAll("_"," ")}</span>{p.approved_at?<div className="order-subtext">{new Date(p.approved_at).toLocaleDateString("en-ZA")}</div>:null}</td><td><span className={"state "+(p.is_active?"approved":p.approval_status==="rejected"?"rejected":"pending_approval")}>{p.is_active?"Active":p.approval_status==="rejected"?"Rejected":"Inactive"}</span><div className="action-pair" style={{marginTop:7,flexWrap:"wrap"}}>{canManageProducts && p.approval_status!=="rejected" && <><button type="button" className="mini-action" disabled={busy} onClick={()=>beginEditProduct(p)}>Edit</button>{p.approval_status==="approved" && <button type="button" className="mini-action danger" disabled={busy} onClick={()=>setProductActive(p,!p.is_active)}>{p.is_active?"Deactivate":"Reactivate"}</button>}</>}{p.approval_status==="pending_approval" && canApproveProducts && p.submitted_by!==user?.id && <><button type="button" className="mini-action" disabled={busy} onClick={()=>reviewExplosiveProduct(p,"approved")}>Approve</button><button type="button" className="mini-action danger" disabled={busy} onClick={()=>reviewExplosiveProduct(p,"rejected")}>Reject</button></>}</div></td></tr>)}</tbody></table></div> : <div className="empty-state">No mine-approved product records have been entered yet. The Magazine Master can submit products using the form above.</div>}{!canManageProducts && !canApproveProducts && <p className="table-footnote">{profile?.role==="magazine_master" ? "Product management is available only to the Magazine Master appointed in Magazine setup." : "Your role can view the approved product register but cannot add or approve products."}</p>}</section>
           </>}
           {section === "daily-orders" && <section className="daily-orders-layout">
             <section className="data-card wide-card">
