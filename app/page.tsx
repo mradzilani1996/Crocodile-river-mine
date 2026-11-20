@@ -442,7 +442,6 @@ export default function Home() {
   const canRecordPurchaseDelivery = profile?.role === "admin" || profile?.role === "magazine_master";
   const roleName = (profile?.role || "").replaceAll("_", " ");
   const dueDocumentReviews = documentReviewRows.filter(d => d.status === "current" && d.review_date && d.review_date <= new Date(Date.now() + 30*86400000).toISOString().slice(0,10));
-  const lowStockProducts = activeProducts.filter(p => { const b = controlBookRows.filter(t=>t.product_id===p.id).reduce((sum,t)=>sum+(t.transaction_type==="receipt"||t.transaction_type==="return"?1:t.transaction_type==="issue"?-1:t.adjustment_direction==="increase"?1:-1)*Number(t.quantity),0); return b <= Number(p.minimum_stock); });
   const controlBookBalances = activeProducts.flatMap(p => {
     const recordedSections = Array.from(new Set(controlBookRows.filter(t => t.product_id === p.id).map(t => productBookSection(p, t.control_book_section))));
     const sections = recordedSections.length ? recordedSections : [productBookSection(p)];
@@ -450,13 +449,14 @@ export default function Home() {
       product: p,
       section,
       balance: controlBookRows.filter(t => t.product_id === p.id && productBookSection(p, t.control_book_section) === section).reduce((sum,t) => {
-        const amount = Number(t.quantity);
+        const amount = Number(t.unit_quantity ?? t.quantity ?? 0);
         if (t.transaction_type === "receipt" || t.transaction_type === "return") return sum + amount;
         if (t.transaction_type === "issue") return sum - amount;
         return sum + (t.adjustment_direction === "increase" ? amount : -amount);
       }, 0)
     }));
   });
+  const lowStockProducts = controlBookBalances.filter(({product,balance}) => balance <= Number(product.minimum_stock));
   function productBookSection(product?: Product, recordedSection?: string | null) {
     if (recordedSection && ["Boxes","Bags","Tamping"].includes(recordedSection)) return recordedSection;
     if (product?.control_book_section && ["Boxes","Bags","Tamping"].includes(product.control_book_section)) return product.control_book_section;
@@ -471,9 +471,9 @@ export default function Home() {
   const controlBookEntries = controlBookRows.map(t => {
     const product = products.find(p => p.id === t.product_id);
     const movement = t.transaction_type === "receipt" || t.transaction_type === "return"
-      ? Number(t.quantity)
-      : t.transaction_type === "issue" ? -Number(t.quantity)
-      : t.adjustment_direction === "increase" ? Number(t.quantity) : -Number(t.quantity);
+      ? Number(t.unit_quantity ?? t.quantity ?? 0)
+      : t.transaction_type === "issue" ? -Number(t.unit_quantity ?? t.quantity ?? 0)
+      : t.adjustment_direction === "increase" ? Number(t.unit_quantity ?? t.quantity ?? 0) : -Number(t.unit_quantity ?? t.quantity ?? 0);
     const packageMovement = t.transaction_type === "receipt" || t.transaction_type === "return"
       ? Number(t.package_quantity || 0)
       : t.transaction_type === "issue" ? -Number(t.package_quantity || 0)
