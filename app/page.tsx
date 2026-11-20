@@ -8,7 +8,7 @@ type Magazine = { magazine_name: string; responsible_user_id: string | null; is_
 type EMSProfile = { user_id: string; full_name: string; email: string; role: string; is_active: boolean };
 type Transaction = { id: string; transaction_number: number; transaction_type: string; status: string; quantity: number; transaction_date: string; reference_number: string | null };
 type Product = { id: string; product_code: string; product_name: string; unit_of_measure: string; minimum_stock: number; is_active: boolean; approval_status: string; submitted_by: string | null; approved_by: string | null; approved_at: string | null; approval_notes: string | null };
-type DailyOrder = { id: string; order_number: number; order_date: string; shift: string; work_area: string; blast_site: string | null; requester_name: string; purpose: string; status: string; requested_by: string; approval_notes: string | null };
+type DailyOrder = { id: string; order_number: number; order_date: string; shift: string; work_area: string; blast_site: string | null; miner_name: string; miner_company_number: string; requester_name: string; purpose: string; status: string; requested_by: string; approval_notes: string | null };
 type DailyOrderItem = { id: string; order_id: string; product_id: string; quantity_requested: number; quantity_approved: number | null; quantity_issued: number; notes: string | null };
 type LedgerTransaction = { id: string; transaction_number: number; transaction_type: string; status: string; product_id: string; quantity: number; transaction_date: string; reference_number: string | null; source_or_destination: string | null; issued_to: string | null; purpose: string | null; notes: string | null; adjustment_direction: string; control_book_section: string | null; container_number: string | null; item_type: string | null; item_description: string | null; package_quantity: number; unit_quantity: number; work_section: string | null; miner_company_number: string | null; miner_name: string | null; miner_acknowledged: boolean };
 type PurchaseOrder = { id:string; order_number:number; supplier_name:string; supplier_contact:string|null; supplier_email:string|null; supplier_reference:string|null; quotation_reference:string|null; order_date:string; required_delivery_date:string|null; work_area:string; purpose:string; requested_by:string; requester_name:string; status:string; supplier_order_number:string|null; submitted_at:string; ordered_at:string|null; created_at:string };
@@ -82,6 +82,8 @@ export default function Home() {
   const [orderShift, setOrderShift] = useState("day");
   const [workArea, setWorkArea] = useState("");
   const [blastSite, setBlastSite] = useState("");
+  const [minerName, setMinerName] = useState("");
+  const [minerCompanyNumber, setMinerCompanyNumber] = useState("");
   const [orderPurpose, setOrderPurpose] = useState("");
   const [draftOrderItems, setDraftOrderItems] = useState([{ product_id: "", quantity_requested: "", notes: "" }]);
   const [dataLoading, setDataLoading] = useState(false);
@@ -107,7 +109,7 @@ export default function Home() {
       supabase.from("ems_profiles").select("user_id,full_name,email,role,is_active").order("full_name"),
       supabase.from("ems_explosive_products").select("id,product_code,product_name,unit_of_measure,minimum_stock,is_active,approval_status,submitted_by,approved_by,approved_at,approval_notes").order("product_name"),
       supabase.from("ems_stock_transactions").select("id,transaction_number,transaction_type,status,quantity,transaction_date,reference_number").order("transaction_date", { ascending: false }).limit(8),
-      supabase.from("ems_daily_orders").select("id,order_number,order_date,shift,work_area,blast_site,requester_name,purpose,status,requested_by,approval_notes").order("created_at", { ascending: false }).limit(50),
+      supabase.from("ems_daily_orders").select("id,order_number,order_date,shift,work_area,blast_site,miner_name,miner_company_number,requester_name,purpose,status,requested_by,approval_notes").order("created_at", { ascending: false }).limit(50),
       supabase.from("ems_daily_order_items").select("id,order_id,product_id,quantity_requested,quantity_approved,quantity_issued,notes").order("created_at"),
       supabase.from("ems_stock_transactions").select("id,transaction_number,transaction_type,status,product_id,quantity,transaction_date,reference_number,source_or_destination,issued_to,purpose,notes,adjustment_direction,control_book_section,container_number,item_type,item_description,package_quantity,unit_quantity,work_section,miner_company_number,miner_name,miner_acknowledged").eq("status","posted").order("transaction_date",{ascending:true}).order("transaction_number",{ascending:true}).limit(1000),
       supabase.from("ems_purchase_orders").select("id,order_number,supplier_name,supplier_contact,supplier_email,supplier_reference,quotation_reference,order_date,required_delivery_date,work_area,purpose,requested_by,requester_name,status,supplier_order_number,submitted_at,ordered_at,created_at").order("created_at",{ascending:false}).limit(100),
@@ -241,12 +243,13 @@ export default function Home() {
     const { error: submitError } = await supabase.rpc("ems_submit_daily_order", {
       p_order_date: orderDate, p_shift: orderShift, p_work_area: workArea, p_blast_site: blastSite,
       p_purpose: orderPurpose,
-      p_items: draftOrderItems.map(i => ({ product_id: i.product_id, quantity_requested: Number(i.quantity_requested), notes: i.notes }))
+      p_items: draftOrderItems.map(i => ({ product_id: i.product_id, quantity_requested: Number(i.quantity_requested), notes: i.notes })),
+      p_miner_name: minerName, p_miner_company_number: minerCompanyNumber
     });
     if (submitError) setError("Daily order could not be submitted: " + submitError.message);
     else {
       setNotice("Daily explosive order submitted for authorisation.");
-      setWorkArea(""); setBlastSite(""); setOrderPurpose("");
+      setWorkArea(""); setBlastSite(""); setMinerName(""); setMinerCompanyNumber(""); setOrderPurpose("");
       setDraftOrderItems([{ product_id: "", quantity_requested: "", notes: "" }]);
       await loadDashboard();
     }
@@ -514,8 +517,13 @@ export default function Home() {
                   <label>Work area / section<input value={workArea} onChange={e=>setWorkArea(e.target.value)} placeholder="e.g. Mining section" required /></label>
                   <label>Blast location<input value={blastSite} onChange={e=>setBlastSite(e.target.value)} placeholder="Where will the explosives be used?" /></label>
                 </div>
+                <h4>2. Miner who needs the explosives</h4>
+                <div className="order-fields">
+                  <label>Miner full name<input value={minerName} onChange={e=>setMinerName(e.target.value)} placeholder="Enter miner name and surname" required /></label>
+                  <label>Miner company number<input value={minerCompanyNumber} onChange={e=>setMinerCompanyNumber(e.target.value)} placeholder="Enter miner company number" required /></label>
+                </div>
                 <label>What work will be done?<textarea value={orderPurpose} onChange={e=>setOrderPurpose(e.target.value)} rows={2} placeholder="Briefly describe the planned work" required /></label>
-                <div className="order-lines-heading"><h4>2. Explosives needed</h4><button type="button" className="text-action" disabled={activeProducts.length===0} onClick={()=>setDraftOrderItems([...draftOrderItems,{product_id:"",quantity_requested:"",notes:""}])}>+ Add another product</button></div>
+                <div className="order-lines-heading"><h4>3. Explosives needed</h4><button type="button" className="text-action" disabled={activeProducts.length===0} onClick={()=>setDraftOrderItems([...draftOrderItems,{product_id:"",quantity_requested:"",notes:""}])}>+ Add another product</button></div>
                 {activeProducts.length===0 ? <div className="info-note"><b>No products are available yet.</b><br />The Administrator or Magazine Master must first add the mine-approved explosives to the Product Register and have them authorised. You can submit a daily request once approved products are available.</div> :
                   draftOrderItems.map((line,index)=><div className="order-line" key={index}>
                     <label>Choose explosive<select value={line.product_id} onChange={e=>setDraftOrderItems(draftOrderItems.map((x,i)=>i===index?{...x,product_id:e.target.value}:x))} required><option value="">Select a product</option>{activeProducts.map(p=><option key={p.id} value={p.id}>{p.product_name} ({p.unit_of_measure})</option>)}</select></label>
@@ -528,7 +536,7 @@ export default function Home() {
               </form>
             </section>
             <section className="data-card wide-card"><div className="card-heading"><div><h3>Daily requests</h3><p>Check who submitted each request and whether it is awaiting approval or has been fulfilled.</p></div><span className="role-pill">{dailyOrders.length} requests</span></div>
-              {dailyOrders.length ? <div className="table-wrap"><table><thead><tr><th>REQUEST</th><th>DATE / SHIFT</th><th>REQUESTED BY</th><th>WORK AREA</th><th>STATUS</th><th>ACTION</th></tr></thead><tbody>{dailyOrders.map(o=><tr key={o.id}><td><b>{"DO-"+o.order_number}</b><div className="order-subtext">{dailyOrderItems.filter(i=>i.order_id===o.id).map(i=>{const p=products.find(x=>x.id===i.product_id);return (p?.product_name||"Product")+": "+i.quantity_requested+" "+(p?.unit_of_measure||"");}).join(" · ")}</div></td><td>{new Date(o.order_date+"T00:00:00").toLocaleDateString("en-ZA")}<div className="order-subtext">{o.shift} shift</div></td><td>{o.requester_name}</td><td>{o.work_area}{o.blast_site ? <div className="order-subtext">{o.blast_site}</div> : null}</td><td><span className={"state "+(o.status==="approved"?"approved":o.status==="rejected"?"rejected":o.status==="fulfilled"?"posted":"pending_approval")}>{o.status.replaceAll("_"," ")}</span></td><td>{canApproveOrders && o.status==="submitted" && <span className="action-pair"><button className="mini-action" disabled={busy} onClick={()=>updateDailyOrder(o,"approve")}>Approve</button><button className="mini-action danger" disabled={busy} onClick={()=>updateDailyOrder(o,"reject")}>Reject</button></span>}{canFulfilOrders && o.status==="approved" && <button className="mini-action" disabled={busy} onClick={()=>updateDailyOrder(o,"fulfil")}>Mark fulfilled</button>}{(!canApproveOrders || o.status!=="submitted") && (!canFulfilOrders || o.status!=="approved") && <span className="order-subtext">—</span>}</td></tr>)}</tbody></table></div> : <div className="empty-state">No daily requests have been submitted yet.</div>}
+              {dailyOrders.length ? <div className="table-wrap"><table><thead><tr><th>REQUEST</th><th>DATE / SHIFT</th><th>MINER / COMPANY NO.</th><th>REQUESTED BY</th><th>WORK AREA</th><th>STATUS</th><th>ACTION</th></tr></thead><tbody>{dailyOrders.map(o=><tr key={o.id}><td><b>{"DO-"+o.order_number}</b><div className="order-subtext">{dailyOrderItems.filter(i=>i.order_id===o.id).map(i=>{const p=products.find(x=>x.id===i.product_id);return (p?.product_name||"Product")+": "+i.quantity_requested+" "+(p?.unit_of_measure||"");}).join(" · ")}</div></td><td>{new Date(o.order_date+"T00:00:00").toLocaleDateString("en-ZA")}<div className="order-subtext">{o.shift} shift</div></td><td>{o.miner_name}<div className="order-subtext">{o.miner_company_number}</div></td><td>{o.requester_name}</td><td>{o.work_area}{o.blast_site ? <div className="order-subtext">{o.blast_site}</div> : null}</td><td><span className={"state "+(o.status==="approved"?"approved":o.status==="rejected"?"rejected":o.status==="fulfilled"?"posted":"pending_approval")}>{o.status.replaceAll("_"," ")}</span></td><td>{canApproveOrders && o.status==="submitted" && <span className="action-pair"><button className="mini-action" disabled={busy} onClick={()=>updateDailyOrder(o,"approve")}>Approve</button><button className="mini-action danger" disabled={busy} onClick={()=>updateDailyOrder(o,"reject")}>Reject</button></span>}{canFulfilOrders && o.status==="approved" && <button className="mini-action" disabled={busy} onClick={()=>updateDailyOrder(o,"fulfil")}>Mark fulfilled</button>}{(!canApproveOrders || o.status!=="submitted") && (!canFulfilOrders || o.status!=="approved") && <span className="order-subtext">—</span>}</td></tr>)}</tbody></table></div> : <div className="empty-state">No daily requests have been submitted yet.</div>}
             </section>
           </section>}
 
