@@ -109,7 +109,9 @@ export default function Home() {
       supabase.from("ems_purchase_order_items").select("id,order_id,product_id,item_description,quantity,unit_of_measure,notes").order("created_at"),
       supabase.from("ems_purchase_order_approvals").select("id,order_id,approval_stage,decision,comments,actioned_by,actioned_by_name,actioned_at").order("actioned_at"),
       supabase.from("ems_purchase_deliveries").select("id,delivery_number,order_id,supplier_delivery_note,received_date,received_by,received_by_name,notes,created_at").order("received_date",{ascending:false}),
-      supabase.from("ems_purchase_delivery_items").select("id,delivery_id,order_item_id,quantity_received,notes").order("created_at")
+      supabase.from("ems_purchase_delivery_items").select("id,delivery_id,order_item_id,quantity_received,notes").order("created_at"),
+      supabase.from("ems_stock_transactions").select("id",{count:"exact",head:true}).eq("status","pending_approval"),
+      supabase.from("ems_document_register").select("id,title,document_number,review_date,status").order("review_date",{ascending:true}).limit(300)
     ]);
     if (mag.error) setError("Could not load magazine details. Check the database permissions.");
     else if (mag.data) { setMagazine(mag.data as Magazine); setMagazineName(mag.data.magazine_name); setResponsibleUserId(mag.data.responsible_user_id || ""); }
