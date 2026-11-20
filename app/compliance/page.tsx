@@ -1,0 +1,150 @@
+"use client";
+
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { createClient, User } from "@supabase/supabase-js";
+
+type Row = Record<string, any>;
+const inputStyle: React.CSSProperties = { width: "100%", padding: "10px 12px", border: "1px solid #d7dde5", borderRadius: 8, background: "#fff", color: "#17212b" };
+const labelStyle: React.CSSProperties = { display: "grid", gap: 6, fontSize: 13, fontWeight: 600, color: "#344054" };
+const cardStyle: React.CSSProperties = { background: "#fff", border: "1px solid #e4e8ee", borderRadius: 14, padding: 20, marginBottom: 18 };
+const buttonStyle: React.CSSProperties = { border: 0, borderRadius: 8, padding: "10px 15px", background: "#173b57", color: "#fff", fontWeight: 700, cursor: "pointer" };
+
+export default function CompliancePage() {
+  const supabase = useMemo(() => {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+    return url && key ? createClient(url, key) : null;
+  }, []);
+  const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<Row | null>(null);
+  const [tab, setTab] = useState("incidents");
+  const [incidents, setIncidents] = useState<Row[]>([]);
+  const [inspections, setInspections] = useState<Row[]>([]);
+  const [documents, setDocuments] = useState<Row[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [incident, setIncident] = useState({ incident_type: "other", severity: "low", location: "", description: "", immediate_action: "" });
+  const [inspection, setInspection] = useState({ inspection_type: "Magazine inspection", location: "", findings: "", non_conformances: "", corrective_actions: "", responsible_person: "", due_date: "" });
+  const [document, setDocument] = useState({ document_number: "MIN-DOC-0052", title: "Explosives Control Book", document_type: "Control book", revision: "Rev 5", effective_date: "2025-08-01", review_date: "2028-08-01", external_url: "https://github.com/mradzilani1996/Crocodile-river-mine" });
+  const [reviewNotes, setReviewNotes] = useState<Record<string,string>>({});
+  const role = profile?.role || "";
+  const canManage = ["admin","management"].includes(role);
+  const canInspect = ["admin","management","magazine_master","authorising_officer"].includes(role);
+
+  async function load() {
+    if (!supabase) return;
+    const [i, s, d] = await Promise.all([
+      supabase.from("ems_incidents").select("*").order("created_at",{ascending:false}).limit(200),
+      supabase.from("ems_inspections").select("*").order("inspection_date",{ascending:false}).limit(200),
+      supabase.from("ems_document_register").select("*").order("document_number")
+    ]);
+    if (i.error || s.error || d.error) setError(i.error?.message || s.error?.message || d.error?.message || "Unable to load records.");
+    setIncidents(i.data || []); setInspections(s.data || []); setDocuments(d.data || []);
+  }
+
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.auth.getSession().then(async ({data}) => {
+      const current = data.session?.user || null;
+      setUser(current);
+      if (current) {
+        const {data: p, error: pe} = await supabase.from("ems_profiles").select("full_name,email,role,is_active").eq("user_id",current.id).maybeSingle();
+        if (pe) setError(pe.message);
+        else if (!p?.is_active) setError("Your EMS account is not active.");
+        else { setProfile(p); await load(); }
+      }
+    });
+  }, [supabase]);
+
+  async function submitIncident(e: FormEvent) {
+    e.preventDefault(); if (!supabase || !user || !profile) return;
+    setBusy(true); setError(""); setMessage("");
+    const {error: err} = await supabase.from("ems_incidents").insert({...incident,reported_by:user.id,reporter_name:profile.full_name});
+    if (err) setError(err.message); else { setIncident({incident_type:"other",severity:"low",location:"",description:"",immediate_action:""}); setMessage("Incident report submitted."); await load(); }
+    setBusy(false);
+  }
+  async function submitInspection(e: FormEvent) {
+    e.preventDefault(); if (!supabase || !user || !profile) return;
+    setBusy(true); setError(""); setMessage("");
+    const {error: err} = await supabase.from("ems_inspections").insert({...inspection,inspector_id:user.id,inspector_name:profile.full_name,due_date:inspection.due_date || null});
+    if (err) setError(err.message); else { setInspection({inspection_type:"Magazine inspection",location:"",findings:"",non_conformances:"",corrective_actions:"",responsible_person:"",due_date:""}); setMessage("Inspection recorded."); await load(); }
+    setBusy(false);
+  }
+  async function submitDocument(e: FormEvent) {
+    e.preventDefault(); if (!supabase || !user || !profile || !canManage) return;
+    setBusy(true); setError(""); setMessage("");
+    const {error: err} = await supabase.from("ems_document_register").upsert({...document,uploaded_by:user.id,uploaded_by_name:profile.full_name},{onConflict:"document_number"});
+    if (err) setError(err.message); else { setMessage("Document register entry saved."); await load(); }
+    setBusy(false);
+  }
+  async function reviewIncident(row: Row, status: string) {
+    if (!supabase || !user || !canManage) return;
+    setBusy(true); setError(""); setMessage("");
+    const {error: err} = await supabase.from("ems_incidents").update({status,reviewed_by:user.id,reviewed_at:new Date().toISOString(),review_notes:reviewNotes[row.id] || null,closed_at:status==="closed"?new Date().toISOString():null}).eq("id",row.id);
+    if (err) setError(err.message); else { setMessage("Incident review updated."); await load(); }
+    setBusy(false);
+  }
+  async function updateInspection(row: Row, status: string) {
+    if (!supabase || !user || !canManage) return;
+    setBusy(true); setError(""); setMessage("");
+    const {error: err} = await supabase.from("ems_inspections").update({status,verified_by:user.id,verified_at:new Date().toISOString()}).eq("id",row.id);
+    if (err) setError(err.message); else { setMessage("Inspection status updated."); await load(); }
+    setBusy(false);
+  }
+
+  if (!supabase) return <main style={{padding:32}}>EMS database settings are not configured.</main>;
+  if (!user || !profile) return <main style={{padding:32,maxWidth:650,margin:"auto"}}><h1>Crocodile River Mine EMS</h1><p>Sign in through the main EMS dashboard first, then open the Compliance & Incident Register.</p><a href="/">Return to EMS login</a></main>;
+
+  return <main style={{minHeight:"100vh",background:"#f4f6f8",padding:24,color:"#17212b"}}>
+    <div style={{maxWidth:1240,margin:"0 auto"}}>
+      <header style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:16,flexWrap:"wrap",marginBottom:22}}>
+        <div><a href="/" style={{color:"#315a75",textDecoration:"none",fontWeight:700}}>← EMS Dashboard</a><h1 style={{margin:"10px 0 4px",fontSize:30}}>Compliance & Incident Register</h1><p style={{margin:0,color:"#667085"}}>Crocodile River Mine · Signed in as {profile.full_name} · {role.replaceAll("_"," ")}</p></div>
+        <img src="/crm-logo.svg" alt="Crocodile River Mine" style={{width:160,maxHeight:70,objectFit:"contain"}} />
+      </header>
+      {error && <p role="alert" style={{background:"#fff0f0",color:"#9b2424",padding:12,borderRadius:8}}>{error}</p>}
+      {message && <p style={{background:"#eaf6ef",color:"#17633a",padding:12,borderRadius:8}}>{message}</p>}
+      <nav style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:18}}>
+        {["incidents","inspections","documents"].map(x=><button key={x} onClick={()=>setTab(x)} style={{...buttonStyle,background:tab===x?"#173b57":"#e6ebf0",color:tab===x?"#fff":"#243746",textTransform:"capitalize"}}>{x==="incidents"?"Incidents & discrepancies":x==="inspections"?"Inspections & compliance":"Document register"}</button>)}
+      </nav>
+      {tab==="incidents" && <>
+        <section style={cardStyle}><h2 style={{marginTop:0}}>Report an incident or discrepancy</h2><form onSubmit={submitIncident} style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:14}}>
+          <label style={labelStyle}>Incident category<select style={inputStyle} value={incident.incident_type} onChange={e=>setIncident({...incident,incident_type:e.target.value})}>{["shortage","over-issue","unreturned-stock","damaged-packaging","documentation-error","security-concern","other"].map(x=><option key={x} value={x}>{x.replaceAll("-"," ")}</option>)}</select></label>
+          <label style={labelStyle}>Severity<select style={inputStyle} value={incident.severity} onChange={e=>setIncident({...incident,severity:e.target.value})}>{["low","medium","high","critical"].map(x=><option key={x}>{x}</option>)}</select></label>
+          <label style={labelStyle}>Location / section<input required style={inputStyle} value={incident.location} onChange={e=>setIncident({...incident,location:e.target.value})}/></label>
+          <label style={{...labelStyle,gridColumn:"1/-1"}}>Description<textarea required rows={3} style={inputStyle} value={incident.description} onChange={e=>setIncident({...incident,description:e.target.value})}/></label>
+          <label style={{...labelStyle,gridColumn:"1/-1"}}>Immediate action taken<textarea rows={2} style={inputStyle} value={incident.immediate_action} onChange={e=>setIncident({...incident,immediate_action:e.target.value})}/></label>
+          <div><button disabled={busy} style={buttonStyle}>{busy?"Submitting…":"Submit incident report"}</button></div>
+        </form></section>
+        <section style={cardStyle}><h2 style={{marginTop:0}}>Incident & discrepancy history</h2>{incidents.length===0?<p>No incidents have been recorded.</p>:incidents.map(r=><article key={r.id} style={{borderTop:"1px solid #e6eaf0",padding:"14px 0"}}><div style={{display:"flex",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}><b>INC-{r.incident_number} · {r.incident_type.replaceAll("-"," ")}</b><span>{r.status.replaceAll("_"," ")} · {r.severity}</span></div><p>{r.description}</p><small>{new Date(r.incident_date).toLocaleString("en-ZA")} · {r.location} · Reported by {r.reporter_name}</small>{r.immediate_action&&<p><b>Immediate action:</b> {r.immediate_action}</p>}{canManage&&r.status!=="closed"&&<div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:10}}><input placeholder="Review / corrective action notes" style={{...inputStyle,maxWidth:420}} value={reviewNotes[r.id]||""} onChange={e=>setReviewNotes({...reviewNotes,[r.id]:e.target.value})}/><button style={buttonStyle} disabled={busy} onClick={()=>reviewIncident(r,"under_review")}>Under review</button><button style={buttonStyle} disabled={busy} onClick={()=>reviewIncident(r,"action_required")}>Action required</button><button style={buttonStyle} disabled={busy} onClick={()=>reviewIncident(r,"closed")}>Close incident</button></div>}{r.review_notes&&<p><b>Review notes:</b> {r.review_notes}</p>}</article>)}</section>
+      </>}
+      {tab==="inspections" && <>
+        <section style={cardStyle}><h2 style={{marginTop:0}}>Record inspection / compliance finding</h2>{canInspect?<form onSubmit={submitInspection} style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:14}}>
+          <label style={labelStyle}>Inspection type<input required style={inputStyle} value={inspection.inspection_type} onChange={e=>setInspection({...inspection,inspection_type:e.target.value})}/></label>
+          <label style={labelStyle}>Location<input required style={inputStyle} value={inspection.location} onChange={e=>setInspection({...inspection,location:e.target.value})}/></label>
+          <label style={{...labelStyle,gridColumn:"1/-1"}}>Findings<textarea required rows={3} style={inputStyle} value={inspection.findings} onChange={e=>setInspection({...inspection,findings:e.target.value})}/></label>
+          <label style={{...labelStyle,gridColumn:"1/-1"}}>Non-conformances<textarea rows={2} style={inputStyle} value={inspection.non_conformances} onChange={e=>setInspection({...inspection,non_conformances:e.target.value})}/></label>
+          <label style={{...labelStyle,gridColumn:"1/-1"}}>Corrective actions<textarea rows={2} style={inputStyle} value={inspection.corrective_actions} onChange={e=>setInspection({...inspection,corrective_actions:e.target.value})}/></label>
+          <label style={labelStyle}>Responsible person<input style={inputStyle} value={inspection.responsible_person} onChange={e=>setInspection({...inspection,responsible_person:e.target.value})}/></label>
+          <label style={labelStyle}>Action due date<input type="date" style={inputStyle} value={inspection.due_date} onChange={e=>setInspection({...inspection,due_date:e.target.value})}/></label>
+          <div><button disabled={busy} style={buttonStyle}>Save inspection</button></div>
+        </form>:<p>Your role can view inspection records but cannot create inspections.</p>}</section>
+        <section style={cardStyle}><h2 style={{marginTop:0}}>Inspection register</h2>{inspections.length===0?<p>No inspections recorded.</p>:inspections.map(r=><article key={r.id} style={{borderTop:"1px solid #e6eaf0",padding:"14px 0"}}><b>INSP-{r.inspection_number} · {r.inspection_type}</b><p>{r.findings}</p><small>{r.inspection_date} · {r.location} · Inspector: {r.inspector_name} · Status: {r.status}</small>{r.non_conformances&&<p><b>Non-conformances:</b> {r.non_conformances}</p>}{r.corrective_actions&&<p><b>Corrective actions:</b> {r.corrective_actions}</p>}{r.responsible_person&&<p><b>Responsible:</b> {r.responsible_person} · Due: {r.due_date||"Not set"}</p>}{canManage&&r.status!=="closed"&&<button style={buttonStyle} disabled={busy} onClick={()=>updateInspection(r,"closed")}>Verify and close</button>}</article>)}</section>
+      </>}
+      {tab==="documents" && <>
+        <section style={cardStyle}><h2 style={{marginTop:0}}>Controlled document register</h2><p>Record document number, title, revision, effective date and review date. Attach a file in Supabase Storage or link to the controlled source.</p>{canManage?<form onSubmit={submitDocument} style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:14}}>
+          <label style={labelStyle}>Document number<input required style={inputStyle} value={document.document_number} onChange={e=>setDocument({...document,document_number:e.target.value})}/></label>
+          <label style={labelStyle}>Title<input required style={inputStyle} value={document.title} onChange={e=>setDocument({...document,title:e.target.value})}/></label>
+          <label style={labelStyle}>Document type<input required style={inputStyle} value={document.document_type} onChange={e=>setDocument({...document,document_type:e.target.value})}/></label>
+          <label style={labelStyle}>Revision<input required style={inputStyle} value={document.revision} onChange={e=>setDocument({...document,revision:e.target.value})}/></label>
+          <label style={labelStyle}>Effective date<input type="date" style={inputStyle} value={document.effective_date} onChange={e=>setDocument({...document,effective_date:e.target.value})}/></label>
+          <label style={labelStyle}>Review date<input type="date" style={inputStyle} value={document.review_date} onChange={e=>setDocument({...document,review_date:e.target.value})}/></label>
+          <label style={{...labelStyle,gridColumn:"1/-1"}}>Controlled source URL<input required type="url" style={inputStyle} value={document.external_url} onChange={e=>setDocument({...document,external_url:e.target.value})}/></label>
+          <div><button disabled={busy} style={buttonStyle}>Save document</button></div>
+        </form>:<p>Only administrators and management can maintain controlled documents.</p>}</section>
+        <section style={cardStyle}><h2 style={{marginTop:0}}>Document register</h2>{documents.length===0?<p>No controlled documents have been registered.</p>:<div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",textAlign:"left"}}><thead><tr>{["Document no.","Title","Revision","Effective","Review","Status","Source"].map(x=><th key={x} style={{padding:10,borderBottom:"1px solid #dce2e8"}}>{x}</th>)}</tr></thead><tbody>{documents.map(d=><tr key={d.id}><td style={{padding:10,borderBottom:"1px solid #edf0f3"}}>{d.document_number}</td><td style={{padding:10,borderBottom:"1px solid #edf0f3"}}>{d.title}</td><td style={{padding:10,borderBottom:"1px solid #edf0f3"}}>{d.revision}</td><td style={{padding:10,borderBottom:"1px solid #edf0f3"}}>{d.effective_date||"—"}</td><td style={{padding:10,borderBottom:"1px solid #edf0f3"}}>{d.review_date||"—"}</td><td style={{padding:10,borderBottom:"1px solid #edf0f3"}}>{d.status}</td><td style={{padding:10,borderBottom:"1px solid #edf0f3"}}><a href={d.external_url||"#"} target="_blank" rel="noreferrer">Open source</a></td></tr>)}</tbody></table></div>}</section>
+      </>}
+      <footer style={{color:"#667085",fontSize:12,padding:"12px 2px"}}>CROCODILE RIVER MINE · EMS · AUTHORISED ACCESS ONLY · All changes are subject to database role permissions.</footer>
+    </div>
+  </main>;
+}
