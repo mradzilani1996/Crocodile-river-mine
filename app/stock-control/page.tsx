@@ -12,9 +12,8 @@ export default function StockControlPage(){
  const [user,setUser]=useState<User|null>(null),[profile,setProfile]=useState<AnyRow|null>(null),[products,setProducts]=useState<AnyRow[]>([]),[rows,setRows]=useState<AnyRow[]>([]),[audit,setAudit]=useState<AnyRow[]>([]),[docs,setDocs]=useState<AnyRow[]>([]);
  const [type,setType]=useState("receipt"),[adjustmentDirection,setAdjustmentDirection]=useState("increase"),[section,setSection]=useState("Boxes"),[product,setProduct]=useState(""),[date,setDate]=useState(today),[container,setContainer]=useState(""),[itemType,setItemType]=useState(""),[description,setDescription]=useState(""),[packages,setPackages]=useState(""),[units,setUnits]=useState(""),[reference,setReference]=useState(""),[work,setWork]=useState(""),[companyNo,setCompanyNo]=useState(""),[miner,setMiner]=useState(""),[ack,setAck]=useState(false),[purpose,setPurpose]=useState(""),[notes,setNotes]=useState("");
  const [comment,setComment]=useState<Record<string,string>>({}),[tab,setTab]=useState(()=>typeof window!=="undefined"&&new URLSearchParams(window.location.search).get("tab")==="audit"?"audit":"movement"),[filter,setFilter]=useState("all"),[busy,setBusy]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState("");
- async function load(){if(!db)return;const [p,t,d]=await Promise.all([
+ async function load(){if(!db)return;const [p,d]=await Promise.all([
   db.from("ems_explosive_products").select("id,product_code,product_name,control_book_section,unit_of_measure,minimum_stock,is_active,approval_status").eq("is_active",true).eq("approval_status","approved").order("product_name"),
-  Promise.resolve({data:[],error:null}),
   db.from("ems_document_register").select("id,document_number,title,review_date,status").order("review_date",{ascending:true}).limit(300)
  ]);if(p.error||d.error)setError(p.error?.message||d.error?.message||"Could not load records.");
  let allTransactions:AnyRow[]=[];let offset=0;let transactionError:string|null=null;
