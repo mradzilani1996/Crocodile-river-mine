@@ -53,19 +53,34 @@ export default function ReportsPage() {
       if (!alive) return;
       setUser(auth.user);
       if (!auth.user) { setError("Please sign in to view EMS reports."); setLoading(false); return; }
-      const [p, d, dl, de, i, ins] = await Promise.all([
-        db.from("ems_explosive_products").select("*").order("product_name"),
-        db.from("ems_stock_transactions").select("*").order("transaction_date", { ascending: true }).order("transaction_number", { ascending: true }).range(0, 999),
-        db.from("ems_daily_orders").select("*").order("order_date", { ascending: false }).range(0, 999),
-        db.from("ems_purchase_deliveries").select("*").order("received_date", { ascending: false }).range(0, 999),
-        db.from("ems_incidents").select("*").order("created_at", { ascending: false }).range(0, 999),
-        db.from("ems_inspections").select("*").order("inspection_date", { ascending: false }).range(0, 999)
-      ]);
-      if (!alive) return;
-      const failed = [p, d, dl, de, i, ins].find(x => x.error);
-      if (failed?.error) setError("Some reports could not be loaded: " + failed.error.message);
-      setProducts(p.data || []); setMovements(d.data || []); setDaily(dl.data || []);
-      setDeliveries(de.data || []); setIncidents(i.data || []); setInspections(ins.data || []);
+      const fetchAll = async (table: string, orderBy: string, ascending = false) => {
+        let all: Row[] = [];
+        let offset = 0;
+        while (true) {
+          const page = await (db as any).from(table).select("*").order(orderBy, { ascending }).range(offset, offset + 999);
+          if (page.error) throw page.error;
+          const batch = (page.data || []) as Row[];
+          all = all.concat(batch);
+          if (batch.length < 1000) break;
+          offset += 1000;
+        }
+        return all;
+      };
+      try {
+        const [p, d, dl, de, i, ins] = await Promise.all([
+          fetchAll("ems_explosive_products", "product_name", true),
+          fetchAll("ems_stock_transactions", "transaction_date", true),
+          fetchAll("ems_daily_orders", "order_date"),
+          fetchAll("ems_purchase_deliveries", "received_date"),
+          fetchAll("ems_incidents", "incident_date"),
+          fetchAll("ems_inspections", "inspection_date")
+        ]);
+        if (!alive) return;
+        setProducts(p); setMovements(d); setDaily(dl);
+        setDeliveries(de); setIncidents(i); setInspections(ins);
+      } catch (loadError: any) {
+        if (alive) setError("Some reports could not be loaded: " + (loadError?.message || "Unknown error"));
+      }
       setLoading(false);
     };
     loadAll();
@@ -95,7 +110,7 @@ export default function ReportsPage() {
   }, [movements, products]);
 
   const source = report === "balances" ? balances : report === "movements" ? movements : report === "daily" ? daily : report === "deliveries" ? deliveries : report === "incidents" ? incidents : inspections;
-  const dateField: Record<ReportKey, string> = { balances: "", movements: "transaction_date", daily: "order_date", deliveries: "received_date", incidents: "created_at", inspections: "inspection_date" };
+  const dateField: Record<ReportKey, string> = { balances: "", movements: "transaction_date", daily: "order_date", deliveries: "received_date", incidents: "incident_date", inspections: "inspection_date" };
   const rows = useMemo(() => source.filter(row => {
     if (report === "balances") return section === "All registers" || row.register === section;
     const raw = row[dateField[report]];
@@ -109,7 +124,7 @@ export default function ReportsPage() {
     movements: [{key:"transaction_number",label:"Reference"},{key:"transaction_date",label:"Date"},{key:"transaction_type",label:"Movement"},{key:"product_id",label:"Product ID"},{key:"control_book_section",label:"Register"},{key:"unit_quantity",label:"Units"},{key:"package_quantity",label:"Packages"},{key:"status",label:"Status"},{key:"reference_number",label:"Document reference"}],
     daily: [{key:"order_date",label:"Date"},{key:"shift",label:"Shift"},{key:"work_section",label:"Work area"},{key:"miner_name",label:"Miner"},{key:"miner_company_number",label:"Company number"},{key:"status",label:"Status"}],
     deliveries: [{key:"received_date",label:"Received date"},{key:"supplier_delivery_note",label:"Delivery note"},{key:"order_id",label:"Purchase order"},{key:"received_by_name",label:"Received by"},{key:"notes",label:"Notes"}],
-    incidents: [{key:"created_at",label:"Reported"},{key:"incident_type",label:"Type"},{key:"severity",label:"Severity"},{key:"location",label:"Location"},{key:"description",label:"Description"},{key:"status",label:"Status"}],
+    incidents: [{key:"incident_date",label:"Incident date"},{key:"incident_type",label:"Type"},{key:"severity",label:"Severity"},{key:"location",label:"Location"},{key:"description",label:"Description"},{key:"reporter_name",label:"Reported by"},{key:"status",label:"Status"}],
     inspections: [{key:"inspection_date",label:"Date"},{key:"inspection_type",label:"Inspection"},{key:"location",label:"Location"},{key:"findings",label:"Findings"},{key:"non_conformances",label:"Non-conformances"},{key:"status",label:"Status"}]
   };
 
