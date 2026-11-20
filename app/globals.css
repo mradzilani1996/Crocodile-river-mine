@@ -173,3 +173,32 @@ td{font-size:12px;padding:15px 11px;line-height:1.45}
  .config-form label,.order-form label,.order-line label{font-size:12px}
  .config-form input,.config-form select,.order-form input,.order-form select,.order-form textarea,.order-line input,.order-line select{font-size:13px}
 }
+
+/* Restore the polished mining-industry sign-in layout */
+.login-shell .topbar{height:94px;border-bottom:1px solid #ffffff30}
+.login-shell .brand-logo{width:210px;height:66px;object-fit:contain;object-position:left center}
+.login-shell .brand>div{padding-left:15px;border-left:1px solid #ffffff50}
+.login-shell .brand strong{font-size:13px;letter-spacing:1.8px;color:#fff}
+.login-shell .brand span{font-size:9px;letter-spacing:1.5px;color:#d5e2d2}
+.login-shell .secure{border:1px solid #ffffff65;border-radius:3px;padding:9px 13px;color:#fff;font-size:9px;letter-spacing:1.6px}
+.login-shell .hero{max-width:1180px;width:100%;margin:clamp(48px,8vh,105px) auto 65px;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(330px,.75fr);grid-template-rows:auto auto auto;column-gap:clamp(35px,7vw,105px);align-items:center;text-align:left}
+.login-shell .hero>.eyebrow{grid-column:1;grid-row:1;color:#f3c323;margin:0 0 20px;font-weight:700}
+.login-shell .hero h1{grid-column:1;grid-row:2;font:600 clamp(43px,6.5vw,78px)/.99 'Space Grotesk';letter-spacing:-3.5px;color:#fff;max-width:620px}
+.login-shell .hero h1 em{display:block;color:#f3c323;margin-top:8px}
+.login-shell .hero>.intro{grid-column:1;grid-row:3;margin:25px 0 0;max-width:490px;color:#e0e8df;font-size:15px;line-height:1.8}
+.login-shell .panel{grid-column:2;grid-row:1/4;width:100%;max-width:430px;padding:34px;background:rgba(250,252,248,.97);border:1px solid #ffffffa8;border-top:4px solid #f3c323;border-radius:8px;box-shadow:0 28px 90px #0015088c;backdrop-filter:blur(10px)}
+.login-shell .panel-title{font-size:17px;letter-spacing:1.3px;color:#06451d}
+.login-shell .muted{font-size:12px;color:#69776b;line-height:1.65}
+.login-shell .panel label{font-size:11px;color:#344638;margin-top:17px}
+.login-shell .panel input{background:#fff;border:1px solid #d3ddd3;border-radius:5px;padding:13px 14px;font-size:13px}
+.login-shell .panel button:not(.link-button){border-radius:5px;background:#06451d;padding:14px;font-size:12px;letter-spacing:.4px}
+.login-shell .panel button:not(.link-button):hover{background:#0b5a2a}
+.login-shell .link-button{color:#06451d!important}
+.login-shell .features{max-width:1180px;grid-template-columns:repeat(3,1fr);gap:18px;margin:0 auto 45px}
+.login-shell .features article{padding:18px 20px 20px;border:1px solid #ffffff35;border-top:2px solid #f3c323;background:rgba(3,37,16,.56);border-radius:5px;backdrop-filter:blur(5px)}
+.login-shell .features b{color:#f3c323;font-size:10px;letter-spacing:1.4px}
+.login-shell .features h3{color:#fff;font-size:16px;margin:11px 0 7px}
+.login-shell .features p{color:#d3ded1;font-size:11px;line-height:1.65}
+.login-shell footer{border-color:#ffffff30;color:#d3ded1}
+@media(max-width:850px){.login-shell .hero{grid-template-columns:1fr;grid-template-rows:auto;gap:0;margin:48px auto 45px}.login-shell .hero>.eyebrow,.login-shell .hero h1,.login-shell .hero>.intro,.login-shell .panel{grid-column:1;grid-row:auto}.login-shell .hero h1{font-size:clamp(43px,10vw,66px)}.login-shell .hero>.intro{margin:18px 0 27px}.login-shell .panel{max-width:500px}}
+@media(max-width:650px){.login-shell{padding:0 18px;background-attachment:scroll}.login-shell .topbar{height:76px}.login-shell .brand-logo{width:125px;height:46px}.login-shell .brand>div{padding-left:9px}.login-shell .brand strong{font-size:9px;letter-spacing:1px}.login-shell .brand span{font-size:7px;letter-spacing:.7px}.login-shell .secure{font-size:7px;padding:7px}.login-shell .hero{margin:40px auto}.login-shell .hero h1{letter-spacing:-2px}.login-shell .panel{padding:23px}.login-shell .features{grid-template-columns:1fr;gap:10px}.login-shell .features article{padding:15px}}
