@@ -605,6 +605,10 @@ export default function Home() {
         <a className="nav-item" href="/compliance">✓ <span>Safety & reports</span></a>
         <a className="nav-item" href="/operations">⇄ <span>Shift, access & stocktake</span></a>
         <a className="nav-item" href="/control-book/new">▤ <span>Manual stock entry</span></a>
+        <div className="side-bottom">
+          <div className="user-chip"><strong>{profile?.full_name || user?.email || "Signed in"}</strong><small>{roleName}</small></div>
+          <button type="button" className="signout" onClick={signOut} disabled={busy}>↪ Log out</button>
+        </div>
       </aside>
       <section className="main-area">
         <header className="app-top"><div><span className="crumb">CROCODILE RIVER MINE / EMS</span><h1>{section === "overview" ? "Overview" : section === "products" ? "Explosives inventory" : section === "people" ? "User access" : section === "magazine" ? "Magazine management" : section === "daily-orders" ? "Daily explosive order sheet" : section === "control-book" ? "Explosives control book" : section === "ordering" ? "Explosives & accessories ordering" : section === "deliveries" ? "Supplier delivery receiving" : "Stock records"}</h1></div><div className="top-right"><span className="status-dot"></span> System online <button onClick={loadDashboard} className="refresh-btn">↻ Refresh</button></div></header>
