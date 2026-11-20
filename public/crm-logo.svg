@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 150" role="img" aria-labelledby="title">
+<title id="title">Crocodile River Mine emblem</title>
+<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#d6e6bc"/><stop offset="1" stop-color="#8ea978"/></linearGradient></defs>
+<path d="M90 5 166 32v45c0 35-27 57-76 68C41 134 14 112 14 77V32Z" fill="#17291e" stroke="#c6d9ae" stroke-width="4"/>
+<path d="M35 78c11-15 27-23 48-24l21-13 14 5 5 10 23 4 13 12-20 7-17-2-8 9-21 4-16 12-19-1-10-8-13-1Z" fill="url(#g)" stroke="#dce8ce" stroke-width="2" stroke-linejoin="round"/>
+<path d="m119 56 17-9 12 4-8 9M47 87l-12 9 16 1M82 101l-3 11m22-15 2 12" fill="none" stroke="#17291e" stroke-width="4" stroke-linecap="round"/>
+<circle cx="119" cy="62" r="3" fill="#17291e"/>
+<path d="M27 121h126" stroke="#c6d9ae" stroke-width="2" opacity=".8"/>
+<text x="90" y="137" fill="#dce8ce" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" letter-spacing="2">CRM</text>
+</svg>
