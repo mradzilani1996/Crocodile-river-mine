@@ -1,10 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 150" role="img" aria-labelledby="title">
-<title id="title">Crocodile River Mine emblem</title>
-<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#d6e6bc"/><stop offset="1" stop-color="#8ea978"/></linearGradient></defs>
-<path d="M90 5 166 32v45c0 35-27 57-76 68C41 134 14 112 14 77V32Z" fill="#17291e" stroke="#c6d9ae" stroke-width="4"/>
-<path d="M35 78c11-15 27-23 48-24l21-13 14 5 5 10 23 4 13 12-20 7-17-2-8 9-21 4-16 12-19-1-10-8-13-1Z" fill="url(#g)" stroke="#dce8ce" stroke-width="2" stroke-linejoin="round"/>
-<path d="m119 56 17-9 12 4-8 9M47 87l-12 9 16 1M82 101l-3 11m22-15 2 12" fill="none" stroke="#17291e" stroke-width="4" stroke-linecap="round"/>
-<circle cx="119" cy="62" r="3" fill="#17291e"/>
-<path d="M27 121h126" stroke="#c6d9ae" stroke-width="2" opacity=".8"/>
-<text x="90" y="137" fill="#dce8ce" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" letter-spacing="2">CRM</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 470 140" role="img" aria-labelledby="title">
+<title id="title">Eastplats — Barplats Mines (Pty) Ltd logo from the uploaded explosives control forms</title>
+<path d="M53 7 72 10 88 21 101 22 109 37 104 49 115 59 108 73 97 78 92 96 79 112 67 126 52 119 42 104 31 101 25 86 13 78 8 61 18 47 16 31 30 20 42 21Z" fill="#06451d"/>
+<path d="m54 103 12 8 13 1-12 17-15-6-9-13Z" fill="#f3c323"/>
+<text x="126" y="81" font-family="Arial,Helvetica,sans-serif" font-size="55" font-weight="500" letter-spacing="1" fill="#fff" stroke="#06451d" stroke-width="2.2" paint-order="stroke">EASTPLATS</text>
+<text x="168" y="112" font-family="Arial,Helvetica,sans-serif" font-size="17" font-weight="700" letter-spacing="1.1" fill="#06451d">BARPLATS MINES (PTY) LTD</text>
 </svg>
