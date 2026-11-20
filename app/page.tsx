@@ -33,6 +33,7 @@ export default function Home() {
   const [products, setProducts] = useState<Product[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [dataLoading, setDataLoading] = useState(false);
+  const [authChecking, setAuthChecking] = useState(true);
 
   async function loadProfile(currentUser: User) {
     if (!supabase) return;
@@ -65,13 +66,15 @@ export default function Home() {
 
   useEffect(() => {
     setResetMode(new URLSearchParams(window.location.search).get("mode") === "reset");
-    if (!supabase) return;
+    if (!supabase) { setAuthChecking(false); return; }
     supabase.auth.getSession().then(async ({ data }) => {
       if (data.session?.user) { setUser(data.session.user); await loadProfile(data.session.user); }
+      setAuthChecking(false);
     });
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
       if (!session?.user) setProfile(null);
+      if (event === "PASSWORD_RECOVERY") setResetMode(true);
     });
     return () => listener.subscription.unsubscribe();
   }, [supabase]);
@@ -101,6 +104,12 @@ export default function Home() {
     if (!supabase) return;
     if (newPassword.length < 10) return setError("Use at least 10 characters for your new password.");
     setBusy(true); setError(""); setNotice("");
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData.session) {
+      setError("This password-reset link does not contain a valid sign-in session. Please open the newest reset email link again. If it has expired, request a new link.");
+      setBusy(false);
+      return;
+    }
     const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
     if (updateError) setError(updateError.message);
     else { setResetMode(false); window.history.replaceState({}, "", "/"); setNotice("Your password has been updated. Please sign in with your new password."); await supabase.auth.signOut(); setUser(null); setProfile(null); }
@@ -128,6 +137,44 @@ export default function Home() {
   const canManageMagazine = profile?.role === "admin";
   const roleName = (profile?.role || "").replaceAll("_", " ");
 
+  if (authChecking) return <main className="shell"><div className="hero"><div className="eyebrow">CROCODILE RIVER MINE</div><h1>Explosives <em>Management</em></h1><p className="intro">Checking your secure EMS session…</p></div></main>;
+
+  if (!user || !profile) return (
+    <main className="shell">
+      <header className="topbar"><div className="brand"><div className="mark">CRM</div><div><strong>CROCODILE RIVER MINE</strong><span>EXPLOSIVES MANAGEMENT SYSTEM</span></div></div><div className="secure">SECURE ACCESS</div></header>
+      <section className="hero">
+        <div className="eyebrow">CONTROLLED INVENTORY · TRACEABLE APPROVALS</div>
+        <h1>Explosives <em>Management</em></h1>
+        <p className="intro">One central magazine. Controlled stock movements. Clear accountability and traceable approvals.</p>
+        <div className="panel">
+          <div className="panel-title">{resetMode ? "SET A NEW PASSWORD" : "SYSTEM SIGN IN"}</div>
+          <p className="muted">{resetMode ? "Create a new password for your Crocodile River Mine EMS account." : "Sign in using your authorised EMS account."}</p>
+          {resetMode ? (
+            <form onSubmit={saveNewPassword}>
+              <label>New password</label><input type="password" autoComplete="new-password" minLength={10} value={newPassword} onChange={e=>setNewPassword(e.target.value)} required />
+              <button disabled={busy}>{busy ? "Updating…" : "Update password"}</button>
+              <button type="button" className="link-button" onClick={()=>{setResetMode(false);setError("");setNotice("");}}>Back to sign in</button>
+            </form>
+          ) : (
+            <>
+              <form onSubmit={signIn}>
+                <label>Email address</label><input type="email" autoComplete="username" value={email} onChange={e=>setEmail(e.target.value)} required />
+                <label>Password</label><input type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} required />
+                <button disabled={busy}>{busy ? "Signing in…" : "Sign in securely"}</button>
+              </form>
+              <button type="button" className="link-button" onClick={()=>{setResetMode(true);setError("");setNotice("");}}>Forgot your password?</button>
+            </>
+          )}
+          {notice && <div className="feedback success">{notice}</div>}
+          {error && <div className="feedback error">{error}</div>}
+          <small>AUTHORISED PERSONNEL ONLY · ALL ACCESS IS LOGGED</small>
+        </div>
+      </section>
+      <div className="features"><article><b>01 / CONTROL</b><h3>Central magazine records</h3><p>Maintain one accountable system record for the mine's magazine.</p></article><article><b>02 / ACCOUNTABILITY</b><h3>Role-based access</h3><p>System access is limited according to each approved user profile.</p></article><article><b>03 / TRACEABILITY</b><h3>Auditable records</h3><p>Maintain a clear record of authorised system activity and approvals.</p></article></div>
+      <footer>CROCODILE RIVER MINE · EXPLOSIVES MANAGEMENT SYSTEM</footer>
+    </main>
+  );
+
   return (
     <main className="app-shell">
       <aside className="sidebar">
@@ -138,7 +185,7 @@ export default function Home() {
         <button className={section === "people" ? "nav-item active" : "nav-item"} onClick={() => setSection("people")}>♙ <span>User profiles</span></button>
         <button className={section === "products" ? "nav-item active" : "nav-item"} onClick={() => setSection("products")}>▤ <span>Product register</span></button>
         <button className={section === "transactions" ? "nav-item active" : "nav-item"} onClick={() => setSection("transactions")}>⇄ <span>Stock records</span></button>
-        <div className="side-bottom"><div className="user-chip"><span className="avatar">{(profile?.full_name || "A").slice(0,1).toUpperCase()}</span><div><strong>{profile?.full_name || user.email}</strong><small>{roleName}</small></div></div><button className="signout" onClick={signOut}>Sign out ↗</button></div>
+        <div className="side-bottom"><div className="user-chip"><span className="avatar">{(profile?.full_name || "A").slice(0,1).toUpperCase()}</span><div><strong>{profile?.full_name || user?.email || "EMS user"}</strong><small>{roleName}</small></div></div><button className="signout" onClick={signOut}>Sign out ↗</button></div>
       </aside>
       <section className="main-area">
         <header className="app-top"><div><span className="crumb">CROCODILE RIVER MINE / EMS</span><h1>{section === "overview" ? "Dashboard" : section === "magazine" ? "Magazine management" : section === "people" ? "User profiles" : section === "products" ? "Product register" : "Stock records"}</h1></div><div className="top-right"><span className="status-dot"></span> System online <button onClick={loadDashboard} className="refresh-btn">↻ Refresh</button></div></header>
