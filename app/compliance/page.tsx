@@ -30,7 +30,7 @@ export default function CompliancePage() {
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [reviewNotes, setReviewNotes] = useState<Record<string,string>>({});
   const role = profile?.role || "";
-  const canManage = ["admin","management"].includes(role);
+  const canManage = ["admin","management","magazine_master"].includes(role);
   const canInspect = ["admin","management","magazine_master","authorising_officer"].includes(role);
 
   async function load() {
