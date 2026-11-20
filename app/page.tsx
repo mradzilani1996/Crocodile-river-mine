@@ -379,14 +379,14 @@ export default function Home() {
       }, 0)
     }));
   });
-  const productBookSection = (product?: Product, recordedSection?: string | null) => {
+  function productBookSection(product?: Product, recordedSection?: string | null) {
     if (recordedSection && ["Boxes","Bags","Tamping"].includes(recordedSection)) return recordedSection;
     const label = `${product?.product_code || ""} ${product?.product_name || ""}`.toLowerCase();
     if (/tamp/.test(label)) return "Tamping";
     if (/bag/.test(label)) return "Bags";
     if (/box/.test(label)) return "Boxes";
     return "Unclassified";
-  };
+  }
   const runningBalances = new Map<string, number>();
   const runningPackageBalances = new Map<string, number>();
   const controlBookEntries = controlBookRows.map(t => {
