@@ -546,22 +546,22 @@ export default function Home() {
     <main className="app-shell">
       <aside className="sidebar">
         <div className="side-brand"><img className="side-logo" src="/crm-logo.svg" alt="Eastplats logo" /><div><strong>CROCODILE RIVER MINE</strong><span>EXPLOSIVES MANAGEMENT</span></div></div>
-        <div className="nav-caption">WORKSPACE</div>
+        <div className="nav-caption">MAIN MENU</div>
         <button className={section === "overview" ? "nav-item active" : "nav-item"} onClick={() => setSection("overview")}>▤ <span>Home</span></button>
-        <button className={section === "products" ? "nav-item active" : "nav-item"} onClick={() => setSection("products")}>▤ <span>Stock</span></button>
-        <a className="nav-item" href="/stock-control">⇄ <span>Issue / Return</span></a>
-        {profile?.role === "admin" && <button className={section === "people" ? "nav-item active" : "nav-item"} onClick={() => setSection("people")}>♙ <span>Users</span></button>}
-        <a className="nav-item" href="/stock-control?tab=audit">◷ <span>Activity history</span></a>
-        <div className="nav-caption">MAGAZINE OPERATIONS</div>
-        <button className={section === "magazine" ? "nav-item active" : "nav-item"} onClick={() => setSection("magazine")}>▣ <span>Magazine</span></button>
+        <button className={section === "products" ? "nav-item active" : "nav-item"} onClick={() => setSection("products")}>▤ <span>Product register</span></button>
+        <a className="nav-item" href="/stock-control">⇄ <span>Record movement</span></a>
+        {profile?.role === "admin" && <button className={section === "people" ? "nav-item active" : "nav-item"} onClick={() => setSection("people")}>♙ <span>Manage users</span></button>}
+        <a className="nav-item" href="/stock-control?tab=audit">◷ <span>Action history</span></a>
+        <div className="nav-caption">DAILY MAGAZINE WORK</div>
+        <button className={section === "magazine" ? "nav-item active" : "nav-item"} onClick={() => setSection("magazine")}>▣ <span>Magazine setup</span></button>
         <button className={section === "daily-orders" ? "nav-item active" : "nav-item"} onClick={() => setSection("daily-orders")}>▧ <span>Daily requests</span></button>
-        <button className={section === "control-book" ? "nav-item active" : "nav-item"} onClick={() => setSection("control-book")}>▤ <span>Stock book</span></button>
+        <button className={section === "control-book" ? "nav-item active" : "nav-item"} onClick={() => setSection("control-book")}>▤ <span>Stock book & balances</span></button>
         <button className={section === "ordering" ? "nav-item active" : "nav-item"} onClick={() => setSection("ordering")}>▧ <span>Supplier orders</span></button>
         <button className={section === "deliveries" ? "nav-item active" : "nav-item"} onClick={() => setSection("deliveries")}>⇩ <span>Receive delivery</span></button>
         <a className="nav-item" href="/reports">▤ <span>Reports</span></a>
         <a className="nav-item" href="/compliance">✓ <span>Safety & reports</span></a>
-        <a className="nav-item" href="/operations">⇄ <span>Magazine tasks</span></a>
-        <a className="nav-item" href="/control-book/new">▤ <span>Add stock entry</span></a>
+        <a className="nav-item" href="/operations">⇄ <span>Shift, access & stocktake</span></a>
+        <a className="nav-item" href="/control-book/new">▤ <span>Manual stock entry</span></a>
       </aside>
       <section className="main-area">
         <header className="app-top"><div><span className="crumb">CROCODILE RIVER MINE / EMS</span><h1>{section === "overview" ? "Overview" : section === "products" ? "Explosives inventory" : section === "people" ? "User access" : section === "magazine" ? "Magazine management" : section === "daily-orders" ? "Daily explosive order sheet" : section === "control-book" ? "Explosives control book" : section === "ordering" ? "Explosives & accessories ordering" : section === "deliveries" ? "Supplier delivery receiving" : "Stock records"}</h1></div><div className="top-right"><span className="status-dot"></span> System online <button onClick={loadDashboard} className="refresh-btn">↻ Refresh</button></div></header>
