@@ -1,3 +1,4 @@
+import EmsPageHeader from "@/components/ems-page-header";
 "use client";
 import {FormEvent,useEffect,useMemo,useState} from "react";
 import {createClient,User} from "@supabase/supabase-js";
@@ -41,7 +42,7 @@ export default function StockControlPage(){
  async function post(r:AnyRow){if(!db||!user||!canPost)return;setBusy(true);setError("");setNotice("");const {error:e2}=await db.from("ems_stock_transactions").update({status:"posted"}).eq("id",r.id).eq("status","approved");if(e2)setError(e2.message);else{setNotice("Approved movement posted. Stock balances and Control Book will now include it.");await load();}setBusy(false);}
  if(!db)return <main style={{padding:28}}>Database configuration missing.</main>;
  if(!user||!profile)return <main style={{padding:28}}><h1>Stock Management</h1><p>Sign in through the EMS dashboard first.</p><a href="/">Return to login</a>{error&&<p>{error}</p>}</main>;
- return <main style={{minHeight:"100vh",background:"#f4f6f8",padding:24,color:"#17212b"}}><div style={{maxWidth:1400,margin:"auto"}}>
+ return <main className="ems-page" style={{minHeight:"100vh",background:"#f4f6f8",padding:24,color:"#17212b"}}><EmsPageHeader active="stock"/><div style={{maxWidth:1400,margin:"auto"}}>
  <header style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12,marginBottom:20}}><div><a href="/" style={{color:"#315a75",fontWeight:700,textDecoration:"none"}}>← EMS Dashboard</a><h1 style={{fontSize:30,margin:"10px 0 4px"}}>Explosives Stock Management</h1><p style={{margin:0,color:"#667085"}}>Crocodile River Mine · Boxes, Bags and Tamping · {profile.full_name}</p></div><img src="/crm-logo.svg" alt="Crocodile River Mine" style={{width:150,maxHeight:65,objectFit:"contain"}}/></header>
  {error&&<p role="alert" style={{background:"#fff0f0",color:"#9b2424",padding:12,borderRadius:8}}>{error}</p>}{notice&&<p style={{background:"#eaf6ef",color:"#17633a",padding:12,borderRadius:8}}>{notice}</p>}
  <section style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:12,marginBottom:18}}>{[{label:"Active products",value:products.length},{label:"Pending approvals",value:pending},{label:"Posted movements",value:posted.length},{label:"Documents due within 30 days",value:reviewDocs.length}].map(x=><article key={x.label} style={{...panel,margin:0}}><small style={{color:"#667085",fontWeight:700}}>{x.label.toUpperCase()}</small><div style={{fontSize:28,fontWeight:800,marginTop:6}}>{x.value}</div></article>)}</section>
