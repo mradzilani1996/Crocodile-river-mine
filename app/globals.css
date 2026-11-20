@@ -1,8 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
 *{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#101914;color:#f4f5ef;font-family:'DM Sans',sans-serif}.shell{min-height:100vh;background:radial-gradient(ellipse at 50% 0%,#263b2d 0%,#101914 55%);padding:0 7vw}.topbar{height:88px;border-bottom:1px solid #ffffff20;display:flex;align-items:center;justify-content:space-between}.brand{display:flex;align-items:center;gap:13px}.mark{width:43px;height:43px;border:1px solid #b9d39c;color:#c8e1a9;display:grid;place-items:center;font-family:'Space Grotesk';font-weight:700;letter-spacing:-1px}.brand strong,.brand span{display:block;letter-spacing:1.4px}.brand strong{font-size:12px}.brand span{font-size:9px;color:#a8b5a5;margin-top:5px}.secure,.eyebrow{font-size:10px;letter-spacing:2px;color:#c5d9ad}.hero{max-width:740px;margin:92px auto 80px;text-align:center}.eyebrow{margin-bottom:20px}.hero h1{font:600 clamp(42px,7vw,72px)/1.02 'Space Grotesk';letter-spacing:-3px;margin:0}.hero h1 em{font-style:normal;color:#c5d9ad}.intro{max-width:540px;margin:22px auto 34px;color:#b9c2b6;line-height:1.7}.panel{max-width:390px;margin:auto;text-align:left;padding:27px;background:#f5f6f0;color:#1a241c;border-radius:5px;box-shadow:0 20px 70px #0005}.panel-title{font:700 14px 'Space Grotesk';letter-spacing:1.5px}.muted{font-size:12px;color:#69736a;line-height:1.5;margin:9px 0 20px}.panel label{display:block;font-size:11px;font-weight:700;margin:14px 0 7px}.panel input{width:100%;padding:12px;border:1px solid #d7ddd3;border-radius:3px;background:#e9ece6}.panel button{width:100%;padding:13px;margin-top:19px;border:0;border-radius:3px;background:#637b51;color:white;font-weight:700}.panel button:disabled{opacity:.65}.panel small{display:block;text-align:center;color:#788176;font-size:10px;margin-top:15px}.features{max-width:940px;margin:0 auto 70px;display:grid;grid-template-columns:repeat(3,1fr);gap:35px}.features article{border-top:1px solid #657b5b;padding-top:18px}.features b{font:600 12px 'Space Grotesk';color:#c5d9ad}.features h3{font:600 18px 'Space Grotesk';margin:13px 0 8px}.features p{font-size:12px;line-height:1.7;color:#aab5a7;margin:0}footer{border-top:1px solid #ffffff20;padding:24px 0;text-align:center;color:#829080;font-size:9px;letter-spacing:1.4px}@media(max-width:650px){.shell{padding:0 22px}.secure{font-size:8px}.hero{margin:65px auto}.features{grid-template-columns:1fr;gap:25px}.hero h1{letter-spacing:-2px}}
 .panel input{background:#fff;color:#18231a;border:1px solid #cfd8cc;outline:none}.panel input:focus{border-color:#637b51;box-shadow:0 0 0 2px #637b5120}.panel button{cursor:pointer}.panel button:disabled{cursor:wait;opacity:.65}.link-button{display:block!important;width:auto!important;margin:13px auto 0!important;padding:4px!important;background:transparent!important;color:#526d45!important;text-decoration:underline;font-size:11px}.reset-form{display:none;margin-top:12px;padding-top:12px;border-top:1px solid #dce2d8}.reset-form.show{display:block}.feedback{font-size:11px;line-height:1.5;padding:10px;border-radius:3px;margin:14px 0 0}.feedback.error{background:#fce9e7;color:#8a2921}.feedback.success{background:#e8f1e4;color:#35552e}.profile{display:grid;gap:5px;padding:14px;background:#e9eee6;border-radius:3px}.profile span{font-size:9px;letter-spacing:1px;color:#687568;margin-top:5px}.profile strong{font-size:13px;color:#1c2a1e;text-transform:none}.profile .role{text-transform:capitalize}
-
-
 /* EMS application workspace */
 .app-shell{min-height:100vh;background:#f3f5f1;color:#1b281e;display:flex;font-family:'DM Sans',sans-serif}
 .sidebar{width:258px;min-height:100vh;background:#142219;color:#edf2e9;padding:25px 17px;display:flex;flex-direction:column;flex-shrink:0}
@@ -32,197 +30,146 @@
 .notice{padding:11px 14px;margin-bottom:17px;border-radius:4px;font-size:11px}.success-notice{background:#e8f1e4;color:#3e6535}.error-notice{background:#f9e8e6;color:#963e36}.loading-line{font-size:10px;color:#748170;margin:-13px 0 14px}.table-footnote{font-size:10px;color:#849082;margin:14px 0 0}.app-footer{border-top:1px solid #e2e8df;text-align:center;color:#929b8f;font-size:8px;letter-spacing:1.2px;padding:23px 0;margin-top:15px}
 @media(max-width:1000px){.sidebar{width:220px}.content{padding:25px 22px 0}.app-top{padding:0 22px}.stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.content-grid{grid-template-columns:1fr}}
 @media(max-width:650px){.app-shell{display:block}.sidebar{width:100%;min-height:0;padding:14px}.side-brand{padding-bottom:13px}.nav-caption{margin:13px 8px 7px}.sidebar>.nav-item{display:inline-flex;width:49%;padding:10px 7px}.side-bottom{display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding-top:10px}.user-chip{padding:0}.signout{width:auto}.app-top{height:auto;min-height:83px;padding:15px;gap:10px}.app-top h1{font-size:18px}.top-right{font-size:0}.refresh-btn{font-size:9px;margin:0}.content{padding:20px 13px 0}.stats-grid{gap:9px}.stat-card{padding:13px}.stat-card>strong{font-size:23px}.stat-card>strong.stat-text{font-size:13px}.welcome-row h2{font-size:18px}.data-card{padding:14px}.card-heading{align-items:flex-start}.role-pill{white-space:nowrap}}
-
-/* Crocodile River Mine identity */
-.brand-logo{display:block;width:56px;height:56px;object-fit:contain;flex-shrink:0}.side-logo{display:block;width:49px;height:49px;object-fit:contain;flex-shrink:0}.brand{gap:15px}.side-brand{gap:12px}
-@media(max-width:650px){.brand-logo{width:46px;height:46px}.side-logo{width:43px;height:43px}}
-
-/* Uploaded Eastplats logo proportions */
-.brand-logo{width:190px;height:58px;object-fit:contain}.side-logo{width:158px;height:48px;object-fit:contain}
-@media(max-width:650px){.brand-logo{width:145px;height:46px}.side-logo{width:135px;height:42px}}
-
-
-/* Corporate brand refresh — aligned with the uploaded Eastplats / Barplats logo */
-:root{
-  --brand-green:#06451d;
-  --brand-green-deep:#032d13;
-  --brand-green-mid:#0b5a2a;
-  --brand-gold:#f3c323;
-  --brand-gold-soft:#fff4c2;
-  --brand-paper:#f5f7f4;
-  --brand-ink:#17251b;
-}
+/* Crocodile River Mine corporate palette */
+:root{--brand-green:#06451d;--brand-green-deep:#032d13;--brand-green-mid:#0b5a2a;--brand-gold:#f3c323;--brand-gold-soft:#fff4c2;--brand-paper:#f5f7f4;--brand-ink:#17251b}
 html,body{background:var(--brand-green-deep);color:#f7faf6}
 .shell{background:radial-gradient(ellipse at 50% 0%,#14542a 0%,#063719 48%,#032d13 100%)}
-.brand-logo{filter:none}
-.secure,.eyebrow{color:var(--brand-gold)}
-.hero h1 em{color:var(--brand-gold)}
+.secure,.eyebrow{color:var(--brand-gold)}.hero h1 em{color:var(--brand-gold)}
 .panel{border:1px solid #ffffff24;border-top:3px solid var(--brand-gold);border-radius:10px;box-shadow:0 24px 75px #001b0b80}
 .panel input:focus{border-color:var(--brand-green);box-shadow:0 0 0 3px #06451d1c}
 .panel button,.primary-btn{background:var(--brand-green);color:#fff;border-radius:6px;transition:background .18s ease,transform .18s ease}
 .panel button:hover,.primary-btn:hover{background:var(--brand-green-mid);transform:translateY(-1px)}
-.link-button{color:var(--brand-green)!important}
-.features article{border-top:2px solid var(--brand-gold)}
-.features b{color:var(--brand-gold)}
-footer{border-color:#ffffff24}
+.link-button{color:var(--brand-green)!important}.features article{border-top:2px solid var(--brand-gold)}.features b{color:var(--brand-gold)}footer{border-color:#ffffff24}
 .app-shell{background:var(--brand-paper);color:var(--brand-ink)}
 .sidebar{background:linear-gradient(180deg,#06451d 0%,#032d13 100%);border-right:1px solid #02250f}
-.side-brand{border-bottom-color:#ffffff2b}
-.nav-caption{color:#c4d5c8}
-.nav-item{color:#e0e9e1;border-radius:7px}
-.nav-item.active,.nav-item:hover{background:#ffffff16;color:#fff}
-.nav-item.active{box-shadow:inset 3px 0 var(--brand-gold)}
-.avatar{background:var(--brand-gold);color:#17351f}
-.signout{border-color:#ffffff55;color:#fff}
-.signout:hover{background:#ffffff12}
-.app-top{background:#fff;border-bottom:1px solid #e0e8e0}
-.crumb{color:#66766a}
-.app-top h1{color:var(--brand-green)}
-.status-dot{background:#238447}
-.refresh-btn{border-color:#d6e1d7;color:var(--brand-green);border-radius:6px}
-.refresh-btn:hover{background:#f1f7f1;border-color:var(--brand-green)}
-.content{color:var(--brand-ink)}
-.welcome-row h2,.card-heading h3{color:var(--brand-green)}
+.side-brand{border-bottom-color:#ffffff2b}.nav-caption{color:#c4d5c8}.nav-item{color:#e0e9e1;border-radius:7px}
+.nav-item.active,.nav-item:hover{background:#ffffff16;color:#fff}.nav-item.active{box-shadow:inset 3px 0 var(--brand-gold)}
+.avatar{background:var(--brand-gold);color:#17351f}.signout{border-color:#ffffff55;color:#fff}.signout:hover{background:#ffffff12}
+.app-top{background:#fff;border-bottom:1px solid #e0e8e0}.crumb{color:#66766a}.app-top h1{color:var(--brand-green)}.status-dot{background:#238447}
+.refresh-btn{border-color:#d6e1d7;color:var(--brand-green);border-radius:6px}.refresh-btn:hover{background:#f1f7f1;border-color:var(--brand-green)}
+.content{color:var(--brand-ink)}.welcome-row h2,.card-heading h3{color:var(--brand-green)}
 .role-pill{background:var(--brand-gold-soft);color:#614b00;border-radius:5px;font-weight:700}
 .stat-card,.data-card{border:1px solid #e0e8e0;border-radius:9px;box-shadow:0 5px 20px #16351d0a}
-.stat-card{border-top:3px solid var(--brand-gold)}
-.stat-card>strong{color:var(--brand-green)}
-.text-action{color:var(--brand-green);font-weight:700}
-.text-action:hover{text-decoration:underline}
-th{color:#637568}
-td{color:#46564a}
-td b{color:#193c24}
-.state.approved,.state.posted{background:#e3f2e7;color:#145b2c}
-.state.pending_approval{background:#fff4cf;color:#795b00}
-.state.rejected{background:#fae8e6;color:#963e36}
-.empty-state{background:#f8faf8;border-color:#d6e3d8}
-.shortcut{color:var(--brand-green)}
-.shortcut:hover{background:#f7faf7}
-.shortcut b{color:#193c24}
+.stat-card{border-top:3px solid var(--brand-gold)}.stat-card>strong{color:var(--brand-green)}
+.text-action{color:var(--brand-green);font-weight:700}.text-action:hover{text-decoration:underline}
+th{color:#637568}td{color:#46564a}td b{color:#193c24}
+.state.approved,.state.posted{background:#e3f2e7;color:#145b2c}.state.pending_approval{background:#fff4cf;color:#795b00}.state.rejected{background:#fae8e6;color:#963e36}
+.empty-state{background:#f8faf8;border-color:#d6e3d8}.shortcut{color:var(--brand-green)}.shortcut:hover{background:#f7faf7}.shortcut b{color:#193c24}
 .config-form input:focus,.config-form select:focus{outline:2px solid #06451d22;border-color:var(--brand-green)}
 .info-note{background:#f0f6f0;border-left-color:var(--brand-gold);color:#465b49}
-.success-notice{background:#e5f3e8;color:#145b2c}
-.error-notice{background:#fae8e6;color:#963e36}
+.success-notice{background:#e5f3e8;color:#145b2c}.error-notice{background:#fae8e6;color:#963e36}
 .app-footer{border-color:#e0e8e0;color:#718174}
-@media(max-width:650px){
- .sidebar{background:linear-gradient(180deg,#06451d 0%,#032d13 100%)}
- .sidebar>.nav-item{border-radius:6px}
- .sidebar>.nav-item.active{background:#ffffff1c}
- .data-card,.stat-card{border-radius:8px}
-}
-
-
-/* Mining-industry hero login inspired by the AECI Mining Explosives reference */
-.login-shell{
- min-height:100vh;padding:0 clamp(22px,6vw,92px);
- background:
- linear-gradient(90deg,rgba(2,27,12,.94) 0%,rgba(3,39,17,.84) 48%,rgba(3,30,13,.68) 100%),
- url("https://images.squarespace-cdn.com/content/v1/5dc3e3a1ddb32f457c64c6af/1601278908830-WNC9M5S7EMQQ05BQOXX2/AECI%2Bmining%2Bpillar%2Bimage%2Bcopy.jpg") center 43%/cover fixed;
- position:relative;isolation:isolate;
-}
-.login-shell:before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(0deg,rgba(2,25,10,.92),transparent 42%,rgba(2,25,10,.2))}
-.login-shell .topbar{height:94px;border-bottom:1px solid #ffffff30}
-.login-shell .brand-logo{width:210px;height:66px;object-fit:contain;object-position:left center}
-.login-shell .brand>div{padding-left:15px;border-left:1px solid #ffffff50}
-.login-shell .brand strong{font-size:13px;letter-spacing:1.8px;color:#fff}
-.login-shell .brand span{font-size:9px;letter-spacing:1.5px;color:#d5e2d2}
-.login-shell .secure{border:1px solid #ffffff65;border-radius:3px;padding:9px 13px;color:#fff;font-size:9px;letter-spacing:1.6px}
-.login-shell .hero{
- max-width:1180px;width:100%;margin:clamp(48px,8vh,105px) auto 65px;
- display:grid;grid-template-columns:minmax(0,1.15fr) minmax(330px,.75fr);
- grid-template-rows:auto auto auto;column-gap:clamp(35px,7vw,105px);align-items:center;
- text-align:left;
-}
-.login-shell .hero>.eyebrow{grid-column:1;grid-row:1;color:#f3c323;margin:0 0 20px;font-weight:700}
-.login-shell .hero h1{grid-column:1;grid-row:2;font:600 clamp(43px,6.5vw,78px)/.99 'Space Grotesk';letter-spacing:-3.5px;color:#fff;max-width:620px}
-.login-shell .hero h1 em{display:block;color:#f3c323;margin-top:8px}
-.login-shell .hero>.intro{grid-column:1;grid-row:3;margin:25px 0 0;max-width:490px;color:#e0e8df;font-size:15px;line-height:1.8}
-.login-shell .panel{grid-column:2;grid-row:1/4;width:100%;max-width:430px;padding:34px;background:rgba(250,252,248,.97);border:1px solid #ffffffa8;border-top:4px solid #f3c323;border-radius:8px;box-shadow:0 28px 90px #0015088c;backdrop-filter:blur(10px)}
-.login-shell .panel-title{font-size:17px;letter-spacing:1.3px;color:#06451d}
-.login-shell .muted{font-size:12px;color:#69776b;line-height:1.65}
-.login-shell .panel label{font-size:11px;color:#344638;margin-top:17px}
-.login-shell .panel input{background:#fff;border:1px solid #d3ddd3;border-radius:5px;padding:13px 14px;font-size:13px}
-.login-shell .panel button:not(.link-button){border-radius:5px;background:#06451d;padding:14px;font-size:12px;letter-spacing:.4px}
-.login-shell .panel button:not(.link-button):hover{background:#0b5a2a}
-.login-shell .link-button{color:#06451d!important}
-.login-shell .features{max-width:1180px;grid-template-columns:repeat(3,1fr);gap:18px;margin:0 auto 45px}
-.login-shell .features article{padding:18px 20px 20px;border:1px solid #ffffff35;border-top:2px solid #f3c323;background:rgba(3,37,16,.56);border-radius:5px;backdrop-filter:blur(5px)}
-.login-shell .features b{color:#f3c323;font-size:10px;letter-spacing:1.4px}
-.login-shell .features h3{color:#fff;font-size:16px;margin:11px 0 7px}
-.login-shell .features p{color:#d3ded1;font-size:11px;line-height:1.65}
-.login-shell footer{border-color:#ffffff30;color:#d3ded1}
-@media(max-width:850px){
- .login-shell .hero{grid-template-columns:1fr;grid-template-rows:auto;gap:0;margin:48px auto 45px}
- .login-shell .hero>.eyebrow,.login-shell .hero h1,.login-shell .hero>.intro,.login-shell .panel{grid-column:1;grid-row:auto}
- .login-shell .hero h1{font-size:clamp(43px,10vw,66px)}
- .login-shell .hero>.intro{margin:18px 0 27px}
- .login-shell .panel{max-width:500px}
-}
-@media(max-width:650px){
- .login-shell{padding:0 18px;background-attachment:scroll}
- .login-shell .topbar{height:76px}
- .login-shell .brand-logo{width:125px;height:46px}
- .login-shell .brand>div{padding-left:9px}
- .login-shell .brand strong{font-size:9px;letter-spacing:1px}
- .login-shell .brand span{font-size:7px;letter-spacing:.7px}
- .login-shell .secure{font-size:7px;padding:7px}
- .login-shell .hero{margin:40px auto}
- .login-shell .hero h1{letter-spacing:-2px}
- .login-shell .panel{padding:23px}
- .login-shell .features{grid-template-columns:1fr;gap:10px}
- .login-shell .features article{padding:15px}
-}
-
-
-/* Full-screen muted mining video behind the Crocodile River Mine sign-in */
-.login-shell{position:relative;isolation:isolate;overflow:hidden;background:#031d0e!important}
-.login-shell .login-video{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;background:#031d0e}
-.login-shell .login-video iframe{position:absolute;top:50%;left:50%;width:100vw;height:56.25vw;min-width:177.78vh;min-height:100vh;transform:translate(-50%,-50%);border:0;opacity:.78}
-.login-shell:before{z-index:1!important;pointer-events:none}
-.login-shell>.topbar,.login-shell>.hero,.login-shell>.features,.login-shell>footer{position:relative;z-index:2}
-@media(max-width:650px){.login-shell .login-video iframe{opacity:.55;min-width:220vh}}
-@media(prefers-reduced-motion:reduce){.login-shell .login-video{display:none}}
-
-
-/* Use the requested Eastplats mine photograph instead of the video background */
-.login-shell{
- background:
-  linear-gradient(90deg,rgba(2,27,12,.88) 0%,rgba(3,39,17,.72) 48%,rgba(3,30,13,.58) 100%),
-  url("https://www.eastplats.com/wp-content/uploads/2022/04/EPL-120410-0003-e1651233738448-2000x1080.jpg") center 45%/cover fixed!important;
-}
+@media(max-width:650px){.sidebar{background:linear-gradient(180deg,#06451d 0%,#032d13 100%)}.sidebar>.nav-item{border-radius:6px}.sidebar>.nav-item.active{background:#ffffff1c}.data-card,.stat-card{border-radius:8px}}
+/* Login page mine photograph */
+.login-shell{min-height:100vh;padding:0 clamp(22px,6vw,92px);background:linear-gradient(90deg,rgba(2,27,12,.88) 0%,rgba(3,39,17,.72) 48%,rgba(3,30,13,.58) 100%),url("https://www.eastplats.com/wp-content/uploads/2022/04/EPL-120410-0003-e1651233733733-2000x1080.jpg") center 45%/cover fixed!important;position:relative;isolation:isolate}
 .login-shell .login-video{display:none!important}
 @media(max-width:650px){.login-shell{background-attachment:scroll!important}}
-
-
 /* Daily explosive order sheet */
-.daily-orders-layout{display:grid;gap:22px}
-.order-form{display:grid;gap:17px}
+.daily-orders-layout{display:grid;gap:22px}.order-form{display:grid;gap:17px}
 .order-form label,.order-line label{display:grid;gap:7px;font-size:11px;font-weight:650;color:#435247}
 .order-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}
 .order-form input,.order-form select,.order-form textarea,.order-line input,.order-line select{width:100%;min-width:0;border:1px solid #d6dfd7;border-radius:5px;background:#fff;padding:12px 13px;color:#1c2c20;font:inherit;font-size:13px}
-.order-form textarea{resize:vertical;line-height:1.55}
-.order-lines-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:5px}
+.order-form textarea{resize:vertical;line-height:1.55}.order-lines-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:5px}
 .order-lines-heading h4{margin:0;color:#123c20;font-size:14px}
 .order-line{display:grid;grid-template-columns:minmax(180px,1.3fr) minmax(110px,.55fr) minmax(160px,1fr) auto;gap:12px;align-items:end;padding:14px;background:#f5f8f4;border:1px solid #e1e8e1;border-radius:6px}
 .remove-line{border:0;background:transparent;color:#a43b32;font-size:11px;font-weight:700;padding:10px 4px;cursor:pointer}
 .order-subtext{font-size:10px;color:#718075;margin-top:4px;line-height:1.5;max-width:280px}
-.action-pair{display:flex;gap:5px}
-.mini-action{border:0;border-radius:4px;background:#0b5429;color:#fff;padding:7px 9px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap}
-.mini-action:disabled{opacity:.55;cursor:not-allowed}
-.mini-action.danger{background:#a43b32}
+.action-pair{display:flex;gap:5px}.mini-action{border:0;border-radius:4px;background:#0b5429;color:#fff;padding:7px 9px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap}
+.mini-action:disabled{opacity:.55;cursor:not-allowed}.mini-action.danger{background:#a43b32}
 @media(max-width:850px){.order-line{grid-template-columns:1fr 1fr}.order-line label:first-child{grid-column:1/-1}}
 @media(max-width:600px){.order-fields,.order-line{grid-template-columns:1fr}.order-line label:first-child{grid-column:auto}.order-lines-heading{align-items:flex-start;flex-direction:column}.action-pair{flex-wrap:wrap}}
-
-
-/* Improve visibility and fit of the dashboard logo and mine title */
+/* Dashboard brand lockup */
 .sidebar .side-brand{width:100%;min-width:0;gap:10px;align-items:center;padding-left:4px;padding-right:4px}
 .sidebar .side-logo{width:104px;height:48px;flex:0 0 104px;object-fit:contain}
 .sidebar .side-brand>div{min-width:0;flex:1}
 .sidebar .side-brand strong{display:block;color:#fff!important;font-size:9px;line-height:1.35;letter-spacing:.65px;white-space:normal;overflow-wrap:anywhere}
 .sidebar .side-brand span{display:block;color:#e0e9dc!important;font-size:7.5px;line-height:1.45;letter-spacing:.65px;white-space:normal;overflow-wrap:anywhere}
+@media(max-width:650px){.sidebar .side-brand{max-width:100%;gap:12px}.sidebar .side-logo{width:126px;height:43px;flex-basis:126px}.sidebar .side-brand strong{font-size:9px}.sidebar .side-brand span{font-size:8px}}
+/* Professional dashboard typography and spacing refresh */
+.app-shell{font-size:15px}
+.sidebar{width:278px;padding:27px 18px}
+.sidebar .side-brand{padding-bottom:25px;gap:12px}
+.sidebar .side-logo{width:112px;height:52px;flex-basis:112px}
+.sidebar .side-brand strong{font-size:11px;line-height:1.45;letter-spacing:.55px}
+.sidebar .side-brand span{font-size:9px;line-height:1.5;letter-spacing:.6px}
+.nav-caption{font-size:11px;letter-spacing:1.5px;margin:27px 11px 12px}
+.nav-item{font-size:14px;line-height:1.35;padding:13px 12px;gap:13px;border-radius:7px}
+.nav-item span{font-size:14px}
+.user-chip strong{font-size:13px}.user-chip small{font-size:11px}
+.avatar{width:37px;height:37px;font-size:13px}
+.signout{font-size:13px;padding:12px}
+.app-top{height:100px;padding:0 42px}
+.crumb{font-size:11px;letter-spacing:1.4px}
+.app-top h1{font-size:25px}
+.top-right{font-size:12px}.refresh-btn{font-size:12px;padding:10px 14px}
+.content{padding:34px 42px 0}
+.welcome-row{margin-bottom:27px}
+.welcome-row h2{font-size:26px;margin-bottom:7px}
+.welcome-row p,.card-heading p{font-size:13px;line-height:1.55}
+.role-pill{font-size:12px;padding:8px 14px}
+.stats-grid{gap:18px;margin-bottom:22px}
+.stat-card{padding:22px}
+.stat-card>span{font-size:11px;letter-spacing:.8px}
+.stat-card>strong{font-size:34px;margin:14px 0 5px}
+.stat-card>strong.stat-text{font-size:18px;margin-top:17px}
+.stat-card small{font-size:12px}
+.content-grid{gap:20px}
+.data-card{padding:24px;margin-bottom:20px}
+.card-heading{margin-bottom:20px}
+.card-heading h3{font-size:18px;margin-bottom:6px}
+.text-action{font-size:12px}
+th{font-size:10px;letter-spacing:.8px;padding:13px 11px}
+td{font-size:12px;padding:15px 11px;line-height:1.45}
+.state{font-size:11px;padding:6px 10px}
+.empty-state{font-size:13px;padding:34px 18px}
+.shortcut{padding:17px 5px;font-size:20px}
+.shortcut b{font-size:13px}.shortcut small{font-size:11px;line-height:1.45}
+.config-form{gap:18px}
+.config-form label{font-size:13px}
+.config-form input,.config-form select{font-size:14px;padding:13px 14px}
+.info-note{font-size:12px;padding:15px;line-height:1.65}
+.primary-btn{font-size:13px;padding:13px 19px}
+.notice{font-size:13px;padding:13px 16px}
+.loading-line,.table-footnote{font-size:12px;line-height:1.55}
+.app-footer{font-size:10px;padding:25px 0}
+.order-form label,.order-line label{font-size:13px}
+.order-form input,.order-form select,.order-form textarea,.order-line input,.order-line select{font-size:14px;padding:13px 14px}
+.order-lines-heading h4{font-size:16px}
+.remove-line,.mini-action{font-size:12px}
+.order-subtext{font-size:12px;line-height:1.5}
+@media(max-width:1000px){
+ .sidebar{width:238px}
+ .content{padding:28px 25px 0}
+ .app-top{padding:0 25px}
+}
 @media(max-width:650px){
-  .sidebar .side-brand{max-width:100%;gap:12px}
-  .sidebar .side-logo{width:126px;height:43px;flex-basis:126px}
-  .sidebar .side-brand strong{font-size:9px}
-  .sidebar .side-brand span{font-size:8px}
+ .sidebar{width:100%;padding:15px}
+ .sidebar .side-brand{padding-bottom:15px}
+ .sidebar .side-brand strong{font-size:11px}
+ .sidebar .side-brand span{font-size:9px}
+ .nav-caption{font-size:10px;margin:15px 8px 8px}
+ .sidebar>.nav-item{font-size:13px;padding:11px 8px}
+ .sidebar>.nav-item span{font-size:13px}
+ .user-chip strong{font-size:12px}.user-chip small{font-size:10px}
+ .signout{font-size:12px;padding:10px}
+ .app-top{min-height:88px;padding:14px 16px}
+ .app-top h1{font-size:20px}
+ .crumb{font-size:9px}
+ .content{padding:22px 14px 0}
+ .welcome-row h2{font-size:21px}
+ .welcome-row p,.card-heading p{font-size:12px}
+ .role-pill{font-size:10px;padding:7px 9px}
+ .stats-grid{gap:10px}
+ .stat-card{padding:15px 13px}
+ .stat-card>span{font-size:9px;line-height:1.4}
+ .stat-card>strong{font-size:26px}
+ .stat-card>strong.stat-text{font-size:14px}
+ .stat-card small{font-size:10px}
+ .data-card{padding:16px}
+ .card-heading h3{font-size:16px}
+ th{font-size:9px;padding:10px 8px}
+ td{font-size:11px;padding:12px 8px}
+ .shortcut b{font-size:12px}.shortcut small{font-size:10px}
+ .config-form label,.order-form label,.order-line label{font-size:12px}
+ .config-form input,.config-form select,.order-form input,.order-form select,.order-form textarea,.order-line input,.order-line select{font-size:13px}
 }
