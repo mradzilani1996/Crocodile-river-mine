@@ -41,6 +41,8 @@ export default function Home() {
   const [profiles, setProfiles] = useState<EMSProfile[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [pendingMovementCount, setPendingMovementCount] = useState(0);
+  const [documentReviewRows, setDocumentReviewRows] = useState<{id:string;title:string;document_number:string;review_date:string|null;status:string}[]>([]);
   const [controlBookRows, setControlBookRows] = useState<LedgerTransaction[]>([]);
   const [ledgerProduct, setLedgerProduct] = useState("all");
   const [ledgerCategory, setLedgerCategory] = useState("all");
@@ -95,7 +97,7 @@ export default function Home() {
   async function loadDashboard() {
     if (!supabase) return;
     setDataLoading(true); setError("");
-    const [mag, people, productRows, txRows, orderRows, orderItemRows, ledgerRows, purchaseRows, purchaseItemRows, approvalRows, deliveryRows, deliveryItemRows] = await Promise.all([
+    const [mag, people, productRows, txRows, orderRows, orderItemRows, ledgerRows, purchaseRows, purchaseItemRows, approvalRows, deliveryRows, deliveryItemRows, pendingRows, docRows] = await Promise.all([
       supabase.from("ems_magazine").select("magazine_name,responsible_user_id,is_active").eq("singleton", true).maybeSingle(),
       supabase.from("ems_profiles").select("user_id,full_name,email,role,is_active").order("full_name"),
       supabase.from("ems_explosive_products").select("id,product_code,product_name,unit_of_measure,minimum_stock,is_active").order("product_name"),
@@ -123,6 +125,8 @@ export default function Home() {
     if (approvalRows.data) setPurchaseApprovals(approvalRows.data as PurchaseApproval[]);
     if (deliveryRows.data) setPurchaseDeliveries(deliveryRows.data as PurchaseDelivery[]);
     if (deliveryItemRows.data) setPurchaseDeliveryItems(deliveryItemRows.data as PurchaseDeliveryItem[]);
+    if (pendingRows.error) setError("Pending approval count could not be loaded: " + pendingRows.error.message); else setPendingMovementCount(pendingRows.count || 0);
+    if (docRows.error) setError("Document review reminders could not be loaded: " + docRows.error.message); else setDocumentReviewRows(docRows.data || []);
     setDataLoading(false);
   }
 
@@ -310,7 +314,7 @@ export default function Home() {
 
   const activePeople = profiles.filter(p => p.is_active);
   const activeProducts = products.filter(p => p.is_active);
-  const pending = transactions.filter(t => t.status === "pending_approval").length;
+  const pending = pendingMovementCount;
   const canManageMagazine = profile?.role === "admin";
   const canApproveOrders = profile?.role === "admin" || profile?.role === "authorising_officer";
   const canFulfilOrders = profile?.role === "admin" || profile?.role === "magazine_master" || profile?.role === "issuer";
@@ -320,6 +324,8 @@ export default function Home() {
   const canPlacePurchaseOrder = profile?.role === "admin" || profile?.role === "magazine_master";
   const canRecordPurchaseDelivery = profile?.role === "admin" || profile?.role === "magazine_master";
   const roleName = (profile?.role || "").replaceAll("_", " ");
+  const dueDocumentReviews = documentReviewRows.filter(d => d.status === "current" && d.review_date && d.review_date <= new Date(Date.now() + 30*86400000).toISOString().slice(0,10));
+  const lowStockProducts = activeProducts.filter(p => { const b = controlBookRows.filter(t=>t.product_id===p.id).reduce((sum,t)=>sum+(t.transaction_type==="receipt"||t.transaction_type==="return"?1:t.transaction_type==="issue"?-1:t.adjustment_direction==="increase"?1:-1)*Number(t.quantity),0); return b <= Number(p.minimum_stock); });
   const controlBookBalances = activeProducts.map(p => ({
     product: p,
     balance: controlBookRows.filter(t => t.product_id === p.id).reduce((sum,t) => {
@@ -442,12 +448,14 @@ export default function Home() {
               <article className="stat-card"><span>REGISTERED PRODUCTS</span><strong>{activeProducts.length}</strong><small>Active product records</small></article>
               <article className="stat-card"><span>ACTIVE USERS</span><strong>{activePeople.length}</strong><small>Authorised EMS profiles</small></article>
               <article className="stat-card"><span>AWAITING APPROVAL</span><strong>{pending}</strong><small>Transactions pending review</small></article>
+              <article className="stat-card"><span>LOW STOCK ALERTS</span><strong>{lowStockProducts.length}</strong><small>Products at or below minimum</small></article>
+              <article className="stat-card"><span>DOCUMENT REVIEWS</span><strong>{dueDocumentReviews.length}</strong><small>Due or due within 30 days</small></article>
             </div>
             <div className="content-grid">
               <section className="data-card"><div className="card-heading"><div><h3>Recent stock records</h3><p>Latest recorded movements and their current status.</p></div><button className="text-action" onClick={() => setSection("transactions")}>View records →</button></div>
                 {transactions.length ? <div className="table-wrap"><table><thead><tr><th>REFERENCE</th><th>TYPE</th><th>DATE</th><th>STATUS</th></tr></thead><tbody>{transactions.map(t=><tr key={t.id}><td>EMS-{t.transaction_number}</td><td className="capitalize">{t.transaction_type}</td><td>{new Date(t.transaction_date).toLocaleDateString("en-ZA")}</td><td><span className={"state "+t.status}>{t.status.replaceAll("_"," ")}</span></td></tr>)}</tbody></table></div> : <div className="empty-state">No stock transactions have been recorded yet.</div>}
               </section>
-              <section className="data-card quick-card"><div className="card-heading"><div><h3>System shortcuts</h3><p>Manage core EMS setup.</p></div></div><button onClick={() => setSection("magazine")} className="shortcut">▣ <span><b>Magazine configuration</b><small>View the main magazine and responsible person</small></span> →</button><button onClick={() => setSection("people")} className="shortcut">♙ <span><b>User profiles</b><small>Review assigned roles and account status</small></span> →</button><button onClick={() => setSection("products")} className="shortcut">▤ <span><b>Product register</b><small>View registered product records</small></span> →</button><button onClick={() => setSection("daily-orders")} className="shortcut">▧ <span><b>Daily explosive order</b><small>Submit and track daily requirements</small></span> →</button><button onClick={() => setSection("control-book")} className="shortcut">▤ <span><b>Explosives control book</b><small>Review the posted magazine ledger and balances</small></span> →</button><button onClick={() => setSection("ordering")} className="shortcut">▧ <span><b>Explosives & accessories ordering</b><small>Request, approve and track supplier deliveries</small></span> →</button></section>
+              <section className="data-card quick-card"><div className="card-heading"><div><h3>System shortcuts</h3><p>Manage core EMS setup.</p></div></div><button onClick={() => setSection("magazine")} className="shortcut">▣ <span><b>Magazine configuration</b><small>View the main magazine and responsible person</small></span> →</button><button onClick={() => setSection("people")} className="shortcut">♙ <span><b>User profiles</b><small>Review assigned roles and account status</small></span> →</button><button onClick={() => setSection("products")} className="shortcut">▤ <span><b>Product register</b><small>View registered product records</small></span> →</button><button onClick={() => setSection("daily-orders")} className="shortcut">▧ <span><b>Daily explosive order</b><small>Submit and track daily requirements</small></span> →</button><button onClick={() => setSection("control-book")} className="shortcut">▤ <span><b>Explosives control book</b><small>Review the posted magazine ledger and balances</small></span> →</button><button onClick={() => setSection("ordering")} className="shortcut">▧ <span><b>Explosives & accessories ordering</b><small>Request, approve and track supplier deliveries</small></span> →</button><a href="/stock-control" className="shortcut">▣ <span><b>Stock management & approvals</b><small>Balances, movement approvals, reports and audit trail</small></span> →</a></section>
             </div>
           </>}
           {section === "magazine" && <section className="data-card wide-card"><div className="card-heading"><div><h3>Main magazine configuration</h3><p>Maintain the system record and assign the responsible Magazine Master.</p></div><span className="state approved"> {magazine?.is_active ? "Active" : "Inactive"} </span></div>
