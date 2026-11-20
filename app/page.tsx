@@ -7,7 +7,7 @@ type Profile = { full_name: string; email: string; role: string; is_active: bool
 type Magazine = { magazine_name: string; responsible_user_id: string | null; is_active: boolean };
 type EMSProfile = { user_id: string; full_name: string; email: string; role: string; is_active: boolean };
 type Transaction = { id: string; transaction_number: number; transaction_type: string; status: string; quantity: number; transaction_date: string; reference_number: string | null };
-type Product = { id: string; product_code: string; product_name: string; unit_of_measure: string; minimum_stock: number; is_active: boolean; approval_status: string; submitted_by: string | null; approved_by: string | null; approved_at: string | null; approval_notes: string | null };
+type Product = { id: string; product_code: string; product_name: string; control_book_section: string | null; unit_of_measure: string; minimum_stock: number; is_active: boolean; approval_status: string; submitted_by: string | null; approved_by: string | null; approved_at: string | null; approval_notes: string | null };
 type DailyOrder = { id: string; order_number: number; order_date: string; shift: string; work_area: string; blast_site: string | null; miner_name: string; miner_company_number: string; requester_name: string; purpose: string; status: string; requested_by: string; approval_notes: string | null };
 type DailyOrderItem = { id: string; order_id: string; product_id: string; quantity_requested: number; quantity_approved: number | null; quantity_issued: number; notes: string | null };
 type LedgerTransaction = { id: string; transaction_number: number; transaction_type: string; status: string; product_id: string; quantity: number; transaction_date: string; reference_number: string | null; source_or_destination: string | null; issued_to: string | null; purpose: string | null; notes: string | null; adjustment_direction: string; control_book_section: string | null; container_number: string | null; item_type: string | null; item_description: string | null; package_quantity: number; unit_quantity: number; work_section: string | null; miner_company_number: string | null; miner_name: string | null; miner_acknowledged: boolean };
@@ -43,6 +43,7 @@ export default function Home() {
   const [productCode, setProductCode] = useState("");
   const [productName, setProductName] = useState("");
   const [productUnit, setProductUnit] = useState("units");
+  const [productSection, setProductSection] = useState("Boxes");
   const [productMinimum, setProductMinimum] = useState("0");
   const [productNotes, setProductNotes] = useState("");
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -55,6 +56,10 @@ export default function Home() {
   const [ledgerTo, setLedgerTo] = useState("");
   const [dailyOrders, setDailyOrders] = useState<DailyOrder[]>([]);
   const [dailyOrderItems, setDailyOrderItems] = useState<DailyOrderItem[]>([]);
+  const [dailyApprovalQuantities, setDailyApprovalQuantities] = useState<Record<string,string>>({});
+  const [dailyApprovalNotes, setDailyApprovalNotes] = useState<Record<string,string>>({});
+  const [dailyIssueOrderId, setDailyIssueOrderId] = useState("");
+  const [dailyIssueAck, setDailyIssueAck] = useState(false);
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [purchaseOrderItems, setPurchaseOrderItems] = useState<PurchaseOrderItem[]>([]);
   const [purchaseApprovals, setPurchaseApprovals] = useState<PurchaseApproval[]>([]);
@@ -86,6 +91,9 @@ export default function Home() {
   const [minerCompanyNumber, setMinerCompanyNumber] = useState("");
   const [orderPurpose, setOrderPurpose] = useState("");
   const [draftOrderItems, setDraftOrderItems] = useState([{ product_id: "", quantity_requested: "", notes: "" }]);
+  const [inviteFullName, setInviteFullName] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState("issuer");
   const [dataLoading, setDataLoading] = useState(false);
   const [authChecking, setAuthChecking] = useState(true);
 
@@ -107,7 +115,7 @@ export default function Home() {
     const [mag, people, productRows, txRows, orderRows, orderItemRows, ledgerRows, purchaseRows, purchaseItemRows, approvalRows, deliveryRows, deliveryItemRows, pendingRows, docRows] = await Promise.all([
       supabase.from("ems_magazine").select("magazine_name,responsible_user_id,is_active").eq("singleton", true).maybeSingle(),
       supabase.from("ems_profiles").select("user_id,full_name,email,role,is_active").order("full_name"),
-      supabase.from("ems_explosive_products").select("id,product_code,product_name,unit_of_measure,minimum_stock,is_active,approval_status,submitted_by,approved_by,approved_at,approval_notes").order("product_name"),
+      supabase.from("ems_explosive_products").select("id,product_code,product_name,control_book_section,unit_of_measure,minimum_stock,is_active,approval_status,submitted_by,approved_by,approved_at,approval_notes").order("product_name"),
       supabase.from("ems_stock_transactions").select("id,transaction_number,transaction_type,status,quantity,transaction_date,reference_number").order("transaction_date", { ascending: false }).limit(8),
       supabase.from("ems_daily_orders").select("id,order_number,order_date,shift,work_area,blast_site,miner_name,miner_company_number,requester_name,purpose,status,requested_by,approval_notes").order("created_at", { ascending: false }).limit(50),
       supabase.from("ems_daily_order_items").select("id,order_id,product_id,quantity_requested,quantity_approved,quantity_issued,notes").order("created_at"),
@@ -211,12 +219,12 @@ export default function Home() {
     if (!supabase || !user || !canManageProducts) return;
     setBusy(true); setError(""); setNotice("");
     const { error: insertError } = await supabase.from("ems_explosive_products").insert({
-      product_code: productCode.trim(), product_name: productName.trim(), unit_of_measure: productUnit.trim(),
+      product_code: productCode.trim(), product_name: productName.trim(), control_book_section: productSection, unit_of_measure: productUnit.trim(),
       minimum_stock: Number(productMinimum), is_active: false, approval_status: "pending_approval",
       submitted_by: user.id, created_by: user.id, approval_notes: productNotes.trim() || null
     });
     if (insertError) setError("Product could not be submitted: " + insertError.message);
-    else { setNotice("Product submitted for mine authorisation. It will only be available for stock movements after approval."); setProductCode(""); setProductName(""); setProductUnit("units"); setProductMinimum("0"); setProductNotes(""); await loadDashboard(); }
+    else { setNotice("Product submitted for mine authorisation. It will only be available for stock movements after approval."); setProductCode(""); setProductName(""); setProductSection("Boxes"); setProductUnit("units"); setProductMinimum("0"); setProductNotes(""); await loadDashboard(); }
     setBusy(false);
   }
 
@@ -258,15 +266,53 @@ export default function Home() {
 
   async function updateDailyOrder(order: DailyOrder, action: "approve" | "reject" | "fulfil") {
     if (!supabase || !user) return;
-    const patch = action === "approve"
-      ? { status: "approved", approved_by: user.id, approved_at: new Date().toISOString() }
-      : action === "reject"
-      ? { status: "rejected", approved_by: user.id, approved_at: new Date().toISOString(), approval_notes: "Rejected during authorisation review." }
-      : { status: "fulfilled", issued_by: user.id, issued_at: new Date().toISOString() };
     setBusy(true); setError(""); setNotice("");
-    const { error: updateError } = await supabase.from("ems_daily_orders").update(patch).eq("id", order.id).eq("status", order.status);
-    if (updateError) setError("Order status could not be updated: " + updateError.message);
-    else { setNotice("Daily order status updated."); await loadDashboard(); }
+    let resultMessage = "";
+    if (action === "approve" || action === "reject") {
+      const orderItems = dailyOrderItems.filter(i => i.order_id === order.id);
+      const approvedItems = action === "approve" ? orderItems.map(i => ({
+        id: i.id,
+        quantity_approved: Number(dailyApprovalQuantities[i.id] ?? i.quantity_requested)
+      })) : [];
+      if (action === "approve" && approvedItems.some((i,index) =>
+        !Number.isFinite(i.quantity_approved) || i.quantity_approved < 0 ||
+        i.quantity_approved > Number(orderItems[index].quantity_requested)
+      )) {
+        setError("Each approved quantity must be zero or more and cannot exceed the quantity requested.");
+        setBusy(false); return;
+      }
+      const comments = (dailyApprovalNotes[order.id] || "").trim();
+      if (action === "reject" && !comments) {
+        setError("Enter a reason before rejecting this daily request.");
+        setBusy(false); return;
+      }
+      const { error: decisionError } = await supabase.rpc("ems_process_daily_order", {
+        p_order_id: order.id,
+        p_decision: action,
+        p_items: approvedItems,
+        p_comments: comments || null
+      });
+      if (decisionError) setError("Daily request decision could not be saved: " + decisionError.message);
+      else resultMessage = action === "approve"
+        ? "Request approved with the authorised quantities. The Issuer can now prepare the issue."
+        : "Request rejected. The reason has been recorded.";
+    } else {
+      if (dailyIssueOrderId !== order.id || !dailyIssueAck) {
+        setError("Confirm the named miner's acknowledgement before issuing explosives.");
+        setBusy(false); return;
+      }
+      const { data: created, error: fulfilError } = await supabase.rpc("ems_fulfil_daily_order", {
+        p_order_id: order.id,
+        p_miner_acknowledged: true
+      });
+      if (fulfilError) setError("Issue could not be prepared: " + fulfilError.message);
+      else resultMessage = Number(created) > 0
+        ? "Issue recorded for stock approval. The stock balance will decrease only after the Authorising Officer approves and the Magazine Master posts each movement."
+        : "All approved quantities have already been issued and posted.";
+      setDailyIssueOrderId("");
+      setDailyIssueAck(false);
+    }
+    if (resultMessage) { setNotice(resultMessage); await loadDashboard(); }
     setBusy(false);
   }
 
@@ -469,7 +515,7 @@ export default function Home() {
         <button className={section === "overview" ? "nav-item active" : "nav-item"} onClick={() => setSection("overview")}>▤ <span>Home</span></button>
         <button className={section === "products" ? "nav-item active" : "nav-item"} onClick={() => setSection("products")}>▤ <span>Stock</span></button>
         <a className="nav-item" href="/stock-control">⇄ <span>Issue / Return</span></a>
-        <button className={section === "people" ? "nav-item active" : "nav-item"} onClick={() => setSection("people")}>♙ <span>Users</span></button>
+        {profile?.role === "admin" && <button className={section === "people" ? "nav-item active" : "nav-item"} onClick={() => setSection("people")}>♙ <span>Users</span></button>}
         <a className="nav-item" href="/stock-control?tab=audit">◷ <span>Activity history</span></a>
         <div className="nav-caption">MAGAZINE OPERATIONS</div>
         <button className={section === "magazine" ? "nav-item active" : "nav-item"} onClick={() => setSection("magazine")}>▣ <span>Magazine</span></button>
@@ -521,9 +567,30 @@ export default function Home() {
           {section === "magazine" && <section className="data-card wide-card"><div className="card-heading"><div><h3>Main magazine configuration</h3><p>Maintain the system record and assign the responsible Magazine Master.</p></div><span className="state approved"> {magazine?.is_active ? "Active" : "Inactive"} </span></div>
             {magazine ? <form className="config-form" onSubmit={saveMagazine}><label>Magazine name<input value={magazineName} onChange={e=>setMagazineName(e.target.value)} disabled={!canManageMagazine}/></label><label>Responsible person<select value={responsibleUserId} onChange={e=>setResponsibleUserId(e.target.value)} disabled={!canManageMagazine}><option value="">Not assigned</option>{activePeople.filter(p=>p.role === "magazine_master" || p.role === "admin").map(p=><option key={p.user_id} value={p.user_id}>{p.full_name} — {p.role.replaceAll("_"," ")}</option>)}</select></label><div className="info-note">Only an administrator can change the magazine configuration. The assigned person must have an active EMS profile with the appropriate role.</div>{canManageMagazine && <button className="primary-btn" disabled={busy || !magazineName.trim()}>{busy ? "Saving…" : "Save magazine details"}</button>}{!canManageMagazine && <p className="muted">Your role can view this configuration but cannot edit it.</p>}</form> : <div className="empty-state">The main magazine record was not found. Ask the system administrator to verify the database setup.</div>}
           </section>}
-          {section === "people" && <section className="data-card wide-card"><div className="card-heading"><div><h3>EMS user profiles</h3><p>Account access and assigned responsibilities.</p></div><span className="role-pill">{activePeople.length} active</span></div><div className="table-wrap"><table><thead><tr><th>NAME</th><th>EMAIL</th><th>ROLE</th><th>STATUS</th></tr></thead><tbody>{profiles.map(p=><tr key={p.user_id}><td><b>{p.full_name}</b></td><td>{p.email}</td><td className="capitalize">{p.role.replaceAll("_"," ")}</td><td><span className={"state "+(p.is_active ? "approved" : "rejected")}>{p.is_active ? "Active" : "Inactive"}</span></td></tr>)}</tbody></table></div><p className="table-footnote">User creation and role changes are reserved for the next user-management release.</p></section>}
+          {section === "people" && <section className="data-card wide-card">
+            {profile?.role === "admin" ? <>
+              <div className="card-heading"><div><h3>Staff access and responsibilities</h3><p>Invite staff, assign their mine role and deactivate access when they leave or change duties.</p></div><span className="role-pill">{activePeople.length} active</span></div>
+              <form className="order-form" onSubmit={inviteEMSUser}>
+                <h4>Invite a staff member</h4>
+                <div className="order-fields">
+                  <label>Full name<input value={inviteFullName} onChange={e=>setInviteFullName(e.target.value)} required placeholder="Staff member's full name" /></label>
+                  <label>Work email<input type="email" value={inviteEmail} onChange={e=>setInviteEmail(e.target.value)} required placeholder="name@company.co.za" /></label>
+                  <label>EMS role<select value={inviteRole} onChange={e=>setInviteRole(e.target.value)}><option value="issuer">Issuer</option><option value="magazine_master">Magazine Master</option><option value="authorising_officer">Authorising Officer</option><option value="management">Management</option></select></label>
+                </div>
+                <div className="info-note">An invitation email will be sent. The invited person must set their own password. Administrator access is not assignable from this screen.</div>
+                <button className="primary-btn" disabled={busy}>{busy ? "Sending invitation…" : "Send staff invitation"}</button>
+              </form>
+              <div className="table-wrap"><table><thead><tr><th>NAME</th><th>EMAIL</th><th>ROLE</th><th>ACCESS</th></tr></thead><tbody>{profiles.map(p=><tr key={p.user_id}>
+                <td><b>{p.full_name}</b>{p.user_id===user?.id?<div className="order-subtext">Your administrator account</div>:null}</td>
+                <td>{p.email}</td>
+                <td>{p.user_id===user?.id?<span className="capitalize">{p.role.replaceAll("_"," ")}</span>:<select value={p.role} disabled={busy} onChange={e=>updateEMSUser(p,{role:e.target.value})}><option value="issuer">Issuer</option><option value="magazine_master">Magazine Master</option><option value="authorising_officer">Authorising Officer</option><option value="management">Management</option><option value="admin">Administrator</option></select>}</td>
+                <td>{p.user_id===user?.id?<span className="state approved">Active</span>:<button type="button" className="mini-action" disabled={busy} onClick={()=>updateEMSUser(p,{is_active:!p.is_active})}>{p.is_active?"Deactivate":"Reactivate"}</button>}</td>
+              </tr>)}</tbody></table></div>
+              <p className="table-footnote">Only the system administrator can manage staff accounts. Role and access changes are recorded in the activity history.</p>
+            </> : <div className="empty-state">Only the System Administrator can manage EMS staff accounts.</div>}
+          </section>}
           {section === "products" && <>
-            {canManageProducts && <section className="data-card wide-card"><div className="card-heading"><div><h3>Add explosive product</h3><p>Magazine Master or System Administrator submits a product for mine authorisation.</p></div><span className="state pending_approval">Approval required</span></div><form className="order-form" onSubmit={addExplosiveProduct}><div className="order-fields"><label>Product code<input value={productCode} onChange={e=>setProductCode(e.target.value)} placeholder="Mine-approved product code" required /></label><label>Product name<input value={productName} onChange={e=>setProductName(e.target.value)} placeholder="Exact approved product name" required /></label><label>Unit of measure<select value={productUnit} onChange={e=>setProductUnit(e.target.value)}><option value="units">Units</option><option value="boxes">Boxes</option><option value="bags">Bags</option><option value="cases">Cases</option><option value="kg">Kilograms (kg)</option><option value="metres">Metres</option></select></label><label>Minimum stock reference<input type="number" min="0" step="0.001" value={productMinimum} onChange={e=>setProductMinimum(e.target.value)} required /></label></div><label>Supporting note / mine register reference<textarea rows={2} value={productNotes} onChange={e=>setProductNotes(e.target.value)} placeholder="Reference the approved product list or supporting document" /></label><div className="info-note">Use only the exact product name, code and unit shown on the mine-approved explosives register. Submission does not make the product available for stock transactions until an authorised approver approves it.</div><button className="primary-btn" disabled={busy}>{busy ? "Submitting…" : "Submit product for approval"}</button></form></section>}
+            {canManageProducts && <section className="data-card wide-card"><div className="card-heading"><div><h3>Add explosive product</h3><p>Magazine Master or System Administrator submits a product for mine authorisation.</p></div><span className="state pending_approval">Approval required</span></div><form className="order-form" onSubmit={addExplosiveProduct}><div className="order-fields"><label>Product code<input value={productCode} onChange={e=>setProductCode(e.target.value)} placeholder="Mine-approved product code" required /></label><label>Product name<input value={productName} onChange={e=>setProductName(e.target.value)} placeholder="Exact approved product name" required /></label><label>Register<select value={productSection} onChange={e=>setProductSection(e.target.value)} required><option value="Boxes">Boxes register</option><option value="Bags">Bags register</option><option value="Tamping">Tamping register</option></select></label><label>Unit of measure<select value={productUnit} onChange={e=>setProductUnit(e.target.value)}><option value="units">Units</option><option value="boxes">Boxes</option><option value="bags">Bags</option><option value="cases">Cases</option><option value="kg">Kilograms (kg)</option><option value="metres">Metres</option></select></label><label>Minimum stock reference<input type="number" min="0" step="0.001" value={productMinimum} onChange={e=>setProductMinimum(e.target.value)} required /></label></div><label>Supporting note / mine register reference<textarea rows={2} value={productNotes} onChange={e=>setProductNotes(e.target.value)} placeholder="Reference the approved product list or supporting document" /></label><div className="info-note">Use only the exact product name, code and unit shown on the mine-approved explosives register. Submission does not make the product available for stock transactions until an authorised approver approves it.</div><button className="primary-btn" disabled={busy}>{busy ? "Submitting…" : "Submit product for approval"}</button></form></section>}
             <section className="data-card wide-card"><div className="card-heading"><div><h3>Explosive product register</h3><p>Approved product records and minimum-stock reference values. Pending products are excluded from stock transactions.</p></div><span className="role-pill">{activeProducts.length} approved active</span></div>{products.length ? <div className="table-wrap"><table><thead><tr><th>PRODUCT CODE</th><th>PRODUCT NAME</th><th>UNIT</th><th>MINIMUM STOCK</th><th>APPROVAL</th><th>STATUS / ACTION</th></tr></thead><tbody>{products.map(p=><tr key={p.id}><td>{p.product_code}</td><td><b>{p.product_name}</b>{p.approval_notes?<div className="order-subtext">{p.approval_notes}</div>:null}</td><td>{p.unit_of_measure}</td><td>{p.minimum_stock}</td><td><span className={"state "+(p.approval_status==="approved"?"approved":p.approval_status==="rejected"?"rejected":"pending_approval")}>{(p.approval_status||"approved").replaceAll("_"," ")}</span>{p.approved_at?<div className="order-subtext">{new Date(p.approved_at).toLocaleDateString("en-ZA")}</div>:null}</td><td>{p.approval_status==="pending_approval" && canApproveProducts && p.submitted_by!==user?.id ? <span className="action-pair"><button type="button" className="mini-action" disabled={busy} onClick={()=>reviewExplosiveProduct(p,"approved")}>Approve</button><button type="button" className="mini-action danger" disabled={busy} onClick={()=>reviewExplosiveProduct(p,"rejected")}>Reject</button></span> : <span className={"state "+(p.is_active?"approved":"rejected")}>{p.is_active?"Active":"Inactive"}</span>}</td></tr>)}</tbody></table></div> : <div className="empty-state">No mine-approved product records have been entered yet. The Magazine Master can submit products using the form above.</div>}{!canManageProducts && !canApproveProducts && <p className="table-footnote">Your role can view the approved product register but cannot add or approve products.</p>}</section>
           </>}
           {section === "daily-orders" && <section className="daily-orders-layout">
