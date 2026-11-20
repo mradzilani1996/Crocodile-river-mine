@@ -24,6 +24,7 @@ export default function Home() {
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [resetMode, setResetMode] = useState(false);
+  const [resetEmailMode, setResetEmailMode] = useState(false);
   const [resetRequested, setResetRequested] = useState(false);
   const [section, setSection] = useState("overview");
   const [magazine, setMagazine] = useState<Magazine | null>(null);
@@ -147,14 +148,24 @@ export default function Home() {
         <h1>Explosives <em>Management</em></h1>
         <p className="intro">One central magazine. Controlled stock movements. Clear accountability and traceable approvals.</p>
         <div className="panel">
-          <div className="panel-title">{resetMode ? "SET A NEW PASSWORD" : "SYSTEM SIGN IN"}</div>
-          <p className="muted">{resetMode ? "Create a new password for your Crocodile River Mine EMS account." : "Sign in using your authorised EMS account."}</p>
+          <div className="panel-title">{resetMode ? "SET A NEW PASSWORD" : resetEmailMode ? "CREATE YOUR PASSWORD" : "SYSTEM SIGN IN"}</div>
+          <p className="muted">{resetMode ? "Open the password reset email first, then create your new password." : resetEmailMode ? "We will email you a secure link to create your password." : "Sign in using your authorised EMS account."}</p>
           {resetMode ? (
             <form onSubmit={saveNewPassword}>
               <label>New password</label><input type="password" autoComplete="new-password" minLength={10} value={newPassword} onChange={e=>setNewPassword(e.target.value)} required />
               <button disabled={busy}>{busy ? "Updating…" : "Update password"}</button>
               <button type="button" className="link-button" onClick={()=>{setResetMode(false);setError("");setNotice("");}}>Back to sign in</button>
             </form>
+          ) : resetEmailMode ? (
+            resetRequested ? (
+              <div><p className="muted">If this email belongs to an EMS account, a password setup link has been sent. Check your inbox and spam folder.</p><button type="button" className="link-button" onClick={()=>{setResetEmailMode(false);setResetRequested(false);setError("");setNotice("");}}>Back to sign in</button></div>
+            ) : (
+              <form onSubmit={requestReset}>
+                <label>Authorised EMS email address</label><input type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} required />
+                <button disabled={busy}>{busy ? "Sending link…" : "Send password setup link"}</button>
+                <button type="button" className="link-button" onClick={()=>{setResetEmailMode(false);setError("");setNotice("");}}>Back to sign in</button>
+              </form>
+            )
           ) : (
             <>
               <form onSubmit={signIn}>
@@ -162,7 +173,7 @@ export default function Home() {
                 <label>Password</label><input type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} required />
                 <button disabled={busy}>{busy ? "Signing in…" : "Sign in securely"}</button>
               </form>
-              <button type="button" className="link-button" onClick={()=>{setResetMode(true);setError("");setNotice("");}}>Forgot your password?</button>
+              <button type="button" className="link-button" onClick={()=>{setResetEmailMode(true);setResetRequested(false);setError("");setNotice("");}}>Create your password / Forgot password</button>
             </>
           )}
           {notice && <div className="feedback success">{notice}</div>}
