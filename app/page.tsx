@@ -13,8 +13,8 @@ type DailyOrderItem = { id: string; order_id: string; product_id: string; quanti
 type LedgerTransaction = { id: string; transaction_number: number; transaction_type: string; status: string; product_id: string; quantity: number; transaction_date: string; reference_number: string | null; source_or_destination: string | null; issued_to: string | null; purpose: string | null; notes: string | null; adjustment_direction: string };
 type PurchaseOrder = { id:string; order_number:number; supplier_name:string; supplier_contact:string|null; supplier_email:string|null; supplier_reference:string|null; quotation_reference:string|null; order_date:string; required_delivery_date:string|null; work_area:string; purpose:string; requested_by:string; requester_name:string; status:string; supplier_order_number:string|null; submitted_at:string; ordered_at:string|null; created_at:string };
 type PurchaseOrderItem = { id:string; order_id:string; product_id:string|null; item_description:string; quantity:number; unit_of_measure:string; notes:string|null };
-type PurchaseApproval = { id:string; order_id:string; approval_stage:string; decision:string; comments:string|null; actioned_by:string; actioned_at:string };
-type PurchaseDelivery = { id:string; delivery_number:number; order_id:string; supplier_delivery_note:string; received_date:string; received_by:string; notes:string|null; created_at:string };
+type PurchaseApproval = { id:string; order_id:string; approval_stage:string; decision:string; comments:string|null; actioned_by:string; actioned_by_name:string; actioned_at:string };
+type PurchaseDelivery = { id:string; delivery_number:number; order_id:string; supplier_delivery_note:string; received_date:string; received_by:string; received_by_name:string; notes:string|null; created_at:string };
 type PurchaseDeliveryItem = { id:string; delivery_id:string; order_item_id:string; quantity_received:number; notes:string|null };
 
 export default function Home() {
@@ -104,8 +104,8 @@ export default function Home() {
       supabase.from("ems_stock_transactions").select("id,transaction_number,transaction_type,status,product_id,quantity,transaction_date,reference_number,source_or_destination,issued_to,purpose,notes,adjustment_direction").eq("status","posted").order("transaction_date",{ascending:true}).order("transaction_number",{ascending:true}).limit(1000),
       supabase.from("ems_purchase_orders").select("id,order_number,supplier_name,supplier_contact,supplier_email,supplier_reference,quotation_reference,order_date,required_delivery_date,work_area,purpose,requested_by,requester_name,status,supplier_order_number,submitted_at,ordered_at,created_at").order("created_at",{ascending:false}).limit(100),
       supabase.from("ems_purchase_order_items").select("id,order_id,product_id,item_description,quantity,unit_of_measure,notes").order("created_at"),
-      supabase.from("ems_purchase_order_approvals").select("id,order_id,approval_stage,decision,comments,actioned_by,actioned_at").order("actioned_at"),
-      supabase.from("ems_purchase_deliveries").select("id,delivery_number,order_id,supplier_delivery_note,received_date,received_by,notes,created_at").order("received_date",{ascending:false}),
+      supabase.from("ems_purchase_order_approvals").select("id,order_id,approval_stage,decision,comments,actioned_by,actioned_by_name,actioned_at").order("actioned_at"),
+      supabase.from("ems_purchase_deliveries").select("id,delivery_number,order_id,supplier_delivery_note,received_date,received_by,received_by_name,notes,created_at").order("received_date",{ascending:false}),
       supabase.from("ems_purchase_delivery_items").select("id,delivery_id,order_item_id,quantity_received,notes").order("created_at")
     ]);
     if (mag.error) setError("Could not load magazine details. Check the database permissions.");
@@ -517,9 +517,9 @@ export default function Home() {
                       return <tr key={i.id}><td><b>{i.item_description}</b>{i.notes?<div className="order-subtext">{i.notes}</div>:null}</td><td>{Number(i.quantity).toLocaleString("en-ZA")}</td><td>{received.toLocaleString("en-ZA")}</td><td>{outstanding(i).toLocaleString("en-ZA")}</td><td>{i.unit_of_measure}</td></tr>;
                     })}</tbody></table></div>
                     <div className="purchase-history"><b>Approval history</b>
-                      {approvals.length?approvals.map(a=><div className="purchase-history-row" key={a.id}><span>{a.approval_stage.replaceAll("_"," ")}</span><span>{a.decision}</span><small>{new Date(a.actioned_at).toLocaleString("en-ZA")} · {profiles.find(p=>p.user_id===a.actioned_by)?.full_name||"Authorised user"}{a.comments?" · "+a.comments:""}</small></div>):<p className="order-subtext">No approval decisions recorded yet.</p>}
+                      {approvals.length?approvals.map(a=><div className="purchase-history-row" key={a.id}><span>{a.approval_stage.replaceAll("_"," ")}</span><span>{a.decision}</span><small>{new Date(a.actioned_at).toLocaleString("en-ZA")} · {a.actioned_by_name}{a.comments?" · "+a.comments:""}</small></div>):<p className="order-subtext">No approval decisions recorded yet.</p>}
                     </div>
-                    {deliveries.length>0 && <div className="purchase-history"><b>Delivery records</b>{deliveries.map(d=><div className="purchase-history-row" key={d.id}><span>DN: {d.supplier_delivery_note}</span><span>{new Date(d.received_date+"T00:00:00").toLocaleDateString("en-ZA")}</span><small>{purchaseDeliveryItems.filter(x=>x.delivery_id===d.id).reduce((sum,x)=>sum+Number(x.quantity_received),0).toLocaleString("en-ZA")} total units recorded{d.notes?" · "+d.notes:""}</small></div>)}</div>}
+                    {deliveries.length>0 && <div className="purchase-history"><b>Delivery records</b>{deliveries.map(d=><div className="purchase-history-row" key={d.id}><span>DN: {d.supplier_delivery_note}</span><span>{new Date(d.received_date+"T00:00:00").toLocaleDateString("en-ZA")}</span><small>{purchaseDeliveryItems.filter(x=>x.delivery_id===d.id).reduce((sum,x)=>sum+Number(x.quantity_received),0).toLocaleString("en-ZA")} total units recorded · Received by {d.received_by_name}{d.notes?" · "+d.notes:""}</small></div>)}</div>}
                     {canReview && <div className="purchase-actions">
                       <label>Approval comments<input value={purchaseComment} onChange={e=>setPurchaseComment(e.target.value)} placeholder="Optional review comments" /></label>
                       <div className="action-pair"><button className="mini-action" disabled={busy} onClick={()=>processPurchaseApproval(o,"approve")}>Approve</button><button className="mini-action danger" disabled={busy} onClick={()=>processPurchaseApproval(o,"reject")}>Reject</button></div>
