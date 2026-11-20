@@ -457,20 +457,20 @@ export default function Home() {
       <aside className="sidebar">
         <div className="side-brand"><img className="side-logo" src="/crm-logo.svg" alt="Eastplats logo" /><div><strong>CROCODILE RIVER MINE</strong><span>EXPLOSIVES MANAGEMENT</span></div></div>
         <div className="nav-caption">WORKSPACE</div>
-        <button className={section === "overview" ? "nav-item active" : "nav-item"} onClick={() => setSection("overview")}>▤ <span>Overview</span></button>
-        <button className={section === "products" ? "nav-item active" : "nav-item"} onClick={() => setSection("products")}>▤ <span>Explosives inventory</span></button>
-        <a className="nav-item" href="/stock-control">⇄ <span>Stock movements</span></a>
-        <button className={section === "people" ? "nav-item active" : "nav-item"} onClick={() => setSection("people")}>♙ <span>User access</span></button>
-        <a className="nav-item" href="/stock-control?tab=audit">◷ <span>Audit trail</span></a>
+        <button className={section === "overview" ? "nav-item active" : "nav-item"} onClick={() => setSection("overview")}>▤ <span>Home</span></button>
+        <button className={section === "products" ? "nav-item active" : "nav-item"} onClick={() => setSection("products")}>▤ <span>Stock</span></button>
+        <a className="nav-item" href="/stock-control">⇄ <span>Issue / Return</span></a>
+        <button className={section === "people" ? "nav-item active" : "nav-item"} onClick={() => setSection("people")}>♙ <span>Users</span></button>
+        <a className="nav-item" href="/stock-control?tab=audit">◷ <span>Activity history</span></a>
         <div className="nav-caption">MAGAZINE OPERATIONS</div>
-        <button className={section === "magazine" ? "nav-item active" : "nav-item"} onClick={() => setSection("magazine")}>▣ <span>Magazine management</span></button>
-        <button className={section === "daily-orders" ? "nav-item active" : "nav-item"} onClick={() => setSection("daily-orders")}>▧ <span>Daily order sheet</span></button>
-        <button className={section === "control-book" ? "nav-item active" : "nav-item"} onClick={() => setSection("control-book")}>▤ <span>Explosives control book</span></button>
-        <button className={section === "ordering" ? "nav-item active" : "nav-item"} onClick={() => setSection("ordering")}>▧ <span>Explosives & accessories ordering</span></button>
-        <button className={section === "deliveries" ? "nav-item active" : "nav-item"} onClick={() => setSection("deliveries")}>⇩ <span>Record supplier deliveries</span></button>
-        <a className="nav-item" href="/compliance">✓ <span>Compliance & incident register</span></a>
-        <a className="nav-item" href="/operations">⇄ <span>Magazine operations</span></a>
-        <a className="nav-item" href="/control-book/new">▤ <span>New Control Book Entry</span></a>
+        <button className={section === "magazine" ? "nav-item active" : "nav-item"} onClick={() => setSection("magazine")}>▣ <span>Magazine</span></button>
+        <button className={section === "daily-orders" ? "nav-item active" : "nav-item"} onClick={() => setSection("daily-orders")}>▧ <span>Daily requests</span></button>
+        <button className={section === "control-book" ? "nav-item active" : "nav-item"} onClick={() => setSection("control-book")}>▤ <span>Stock book</span></button>
+        <button className={section === "ordering" ? "nav-item active" : "nav-item"} onClick={() => setSection("ordering")}>▧ <span>Supplier orders</span></button>
+        <button className={section === "deliveries" ? "nav-item active" : "nav-item"} onClick={() => setSection("deliveries")}>⇩ <span>Receive delivery</span></button>
+        <a className="nav-item" href="/compliance">✓ <span>Safety & reports</span></a>
+        <a className="nav-item" href="/operations">⇄ <span>Magazine tasks</span></a>
+        <a className="nav-item" href="/control-book/new">▤ <span>Add stock entry</span></a>
       </aside>
       <section className="main-area">
         <header className="app-top"><div><span className="crumb">CROCODILE RIVER MINE / EMS</span><h1>{section === "overview" ? "Overview" : section === "products" ? "Explosives inventory" : section === "people" ? "User access" : section === "magazine" ? "Magazine management" : section === "daily-orders" ? "Daily explosive order sheet" : section === "control-book" ? "Explosives control book" : section === "ordering" ? "Explosives & accessories ordering" : section === "deliveries" ? "Supplier delivery receiving" : "Stock records"}</h1></div><div className="top-right"><span className="status-dot"></span> System online <button onClick={loadDashboard} className="refresh-btn">↻ Refresh</button></div></header>
@@ -605,7 +605,7 @@ export default function Home() {
                         <div className="order-fields"><label>Supplier delivery note<input value={deliveryNote} onChange={e=>setDeliveryNote(e.target.value)} required /></label><label>Received date<input type="date" value={deliveryDate} onChange={e=>setDeliveryDate(e.target.value)} required /></label></div>
                         {items.filter(i=>outstanding(i)>0).map(i=><label key={i.id}>{i.item_description} · Outstanding {outstanding(i).toLocaleString("en-ZA")} {i.unit_of_measure}<input type="number" min="0" max={outstanding(i)} step="0.001" value={deliveryQuantities[i.id]||""} onChange={e=>setDeliveryQuantities({...deliveryQuantities,[i.id]:e.target.value})} placeholder="Quantity received now" /></label>)}
                         <label>Delivery notes<textarea rows={2} value={deliveryNotes} onChange={e=>setDeliveryNotes(e.target.value)} /></label>
-                        <div className="action-pair"><button className="mini-action" disabled={busy}>Save delivery record</button><button type="button" className="remove-line" onClick={()=>setDeliveryOrderId("")}>Cancel</button></div>
+                        <div className="action-pair"><button className="mini-action" disabled={busy}>Save delivery</button><button type="button" className="remove-line" onClick={()=>setDeliveryOrderId("")}>Cancel</button></div>
                       </form>:<button className="mini-action" onClick={()=>{setDeliveryOrderId(o.id);setDeliveryNote("");setDeliveryDate(new Date().toISOString().slice(0,10));setDeliveryNotes("");setDeliveryQuantities({});}}>Record delivery</button>}
                     </div>}
                   </article>;
@@ -616,8 +616,8 @@ export default function Home() {
 
           {section === "deliveries" && <section className="purchase-orders-layout">
             <section className="data-card wide-card">
-              <div className="card-heading"><div><h3>Record supplier deliveries</h3><p>Select an approved or placed supplier order, enter the quantities physically received, and save the delivery note. Partial deliveries are supported.</p></div><span className="role-pill">Delivery receiving</span></div>
-              {!canRecordPurchaseDelivery ? <div className="empty-state">Only the Administrator or Magazine Master can record supplier deliveries. Your current role is {roleName}.</div> :
+              <div className="card-heading"><div><h3>Receive a delivery</h3><p>Choose an order, enter what arrived, and save. You can record a delivery in more than one part.</p></div><span className="role-pill">Delivery receiving</span></div>
+              {!canRecordPurchaseDelivery ? <div className="empty-state">Only the Administrator or Magazine Master can receive deliveries. Your account does not have permission.</div> :
                 purchaseOrders.filter(o=>["approved","ordered","partially_delivered"].includes(o.status)).length ? <div className="purchase-order-list">
                   {purchaseOrders.filter(o=>["approved","ordered","partially_delivered"].includes(o.status)).map(o=>{
                     const items=purchaseOrderItems.filter(i=>i.order_id===o.id);
@@ -627,24 +627,24 @@ export default function Home() {
                         <div><span className="order-subtext">SUPPLIER ORDER · PO-{o.order_number}</span><h4>{o.supplier_name}</h4><p>{o.supplier_order_number ? "Supplier PO: "+o.supplier_order_number : "Supplier order reference not yet recorded"} · {o.work_area}</p></div>
                         <span className={"state "+(o.status==="partially_delivered"?"pending_approval":"approved")}>{o.status.replaceAll("_"," ")}</span>
                       </div>
-                      <div className="table-wrap"><table><thead><tr><th>PRODUCT / ITEM</th><th>QUANTITY ORDERED</th><th>DELIVERED TO DATE</th><th>OUTSTANDING</th><th>UNIT</th></tr></thead><tbody>{items.map(i=>{
+                      <div className="table-wrap"><table><thead><tr><th>ITEM</th><th>ORDERED</th><th>RECEIVED</th><th>LEFT TO RECEIVE</th><th>UNIT</th></tr></thead><tbody>{items.map(i=>{
                         const received=Number(i.quantity)-outstanding(i);
                         return <tr key={i.id}><td><b>{i.item_description}</b></td><td>{Number(i.quantity).toLocaleString("en-ZA")}</td><td>{received.toLocaleString("en-ZA")}</td><td><b>{outstanding(i).toLocaleString("en-ZA")}</b></td><td>{i.unit_of_measure}</td></tr>;
                       })}</tbody></table></div>
                       <div className="purchase-actions">
                         {deliveryOrderId===o.id?<form className="order-form delivery-form" onSubmit={e=>submitPurchaseDelivery(e,o)}>
-                          <h4>Enter this delivery</h4>
-                          <div className="order-fields"><label>Supplier delivery note number<input value={deliveryNote} onChange={e=>setDeliveryNote(e.target.value)} required /></label><label>Date received<input type="date" value={deliveryDate} onChange={e=>setDeliveryDate(e.target.value)} required /></label></div>
-                          <div className="info-note">Enter only the quantities received on this delivery. The system compares them with the outstanding quantities above and updates delivered-to-date totals when saved.</div>
-                          {items.filter(i=>outstanding(i)>0).map(i=><label key={i.id}>{i.item_description} · Ordered {Number(i.quantity).toLocaleString("en-ZA")} · Already delivered { (Number(i.quantity)-outstanding(i)).toLocaleString("en-ZA")} · Still outstanding {outstanding(i).toLocaleString("en-ZA")} {i.unit_of_measure}<input type="number" min="0" max={outstanding(i)} step="0.001" value={deliveryQuantities[i.id]||""} onChange={e=>setDeliveryQuantities({...deliveryQuantities,[i.id]:e.target.value})} placeholder="Quantity received on this delivery" /></label>)}
+                          <h4>What arrived today?</h4>
+                          <div className="order-fields"><label>Delivery note number<input value={deliveryNote} onChange={e=>setDeliveryNote(e.target.value)} required /></label><label>Date received<input type="date" value={deliveryDate} onChange={e=>setDeliveryDate(e.target.value)} required /></label></div>
+                          <div className="info-note">Enter the amount that arrived today. Do not enter the full order amount unless it all arrived.</div>
+                          {items.filter(i=>outstanding(i)>0).map(i=><label key={i.id}>{i.item_description} · Ordered {Number(i.quantity).toLocaleString("en-ZA")} · Already delivered { (Number(i.quantity)-outstanding(i)).toLocaleString("en-ZA")} · Still outstanding {outstanding(i).toLocaleString("en-ZA")} {i.unit_of_measure}<input type="number" min="0" max={outstanding(i)} step="0.001" value={deliveryQuantities[i.id]||""} onChange={e=>setDeliveryQuantities({...deliveryQuantities,[i.id]:e.target.value})} placeholder="Received today" /></label>)}
                           <label>Delivery notes<textarea rows={2} value={deliveryNotes} onChange={e=>setDeliveryNotes(e.target.value)} /></label>
-                          <div className="action-pair"><button className="mini-action" disabled={busy}>{busy?"Saving delivery…":"Save delivery record"}</button><button type="button" className="remove-line" onClick={()=>setDeliveryOrderId("")}>Cancel</button></div>
-                        </form>:<button className="mini-action" onClick={()=>{setDeliveryOrderId(o.id);setDeliveryNote("");setDeliveryDate(new Date().toISOString().slice(0,10));setDeliveryNotes("");setDeliveryQuantities({});}}>＋ Record delivery for this order</button>}
+                          <div className="action-pair"><button className="mini-action" disabled={busy}>{busy?"Saving delivery…":"Save delivery"}</button><button type="button" className="remove-line" onClick={()=>setDeliveryOrderId("")}>Cancel</button></div>
+                        </form>:<button className="mini-action" onClick={()=>{setDeliveryOrderId(o.id);setDeliveryNote("");setDeliveryDate(new Date().toISOString().slice(0,10));setDeliveryNotes("");setDeliveryQuantities({});}}>＋ Receive this order</button>}
                       </div>
                       {purchaseDeliveries.filter(d=>d.order_id===o.id).length>0 && <div className="purchase-history"><b>Previous delivery notes</b>{purchaseDeliveries.filter(d=>d.order_id===o.id).map(d=><div className="purchase-history-row" key={d.id}><span>{d.supplier_delivery_note}</span><span>{new Date(d.received_date+"T00:00:00").toLocaleDateString("en-ZA")}</span><small>Received by {d.received_by_name}</small></div>)}</div>}
                     </article>;
                   })}
-                </div>:<div className="empty-state">There are no approved supplier orders ready for delivery. Once a purchase order has completed its approvals, it will appear here for receiving.</div>}
+                </div>:<div className="empty-state">No orders are ready to receive yet. An order will appear here after it has been approved.</div>}
             </section>
           </section>}
 
