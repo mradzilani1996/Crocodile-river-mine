@@ -141,7 +141,8 @@ export default function Home() {
   if (authChecking) return <main className="shell login-shell"><div className="hero"><div className="eyebrow">CROCODILE RIVER MINE</div><h1>Explosives <em>Management</em></h1><p className="intro">Checking your secure EMS session…</p></div></main>;
 
   if (!user || !profile) return (
-    <main className="shell">
+    <main className="shell login-shell">
+      <div className="login-video" aria-hidden="true"><iframe src="https://www.youtube-nocookie.com/embed/LcuYJPaDE-M?autoplay=1&mute=1&controls=0&loop=1&playlist=LcuYJPaDE-M&playsinline=1&rel=0&modestbranding=1" title="Mining operations background video" allow="autoplay; encrypted-media; picture-in-picture" referrerPolicy="strict-origin-when-cross-origin" /></div>
       <header className="topbar"><div className="brand"><img className="brand-logo" src="/crm-logo.svg" alt="Crocodile River Mine logo" /><div><strong>CROCODILE RIVER MINE</strong><span>EXPLOSIVES MANAGEMENT SYSTEM</span></div></div><div className="secure">SECURE ACCESS</div></header>
       <section className="hero">
         <div className="eyebrow">CONTROLLED INVENTORY · TRACEABLE APPROVALS</div>
