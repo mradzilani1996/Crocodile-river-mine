@@ -148,7 +148,7 @@ export default function Home() {
   }
 
   useEffect(() => {
-    setResetMode(new URLSearchParams(window.location.search).get("mode") === "reset");
+    setResetMode(new URLSearchParams(window.location.search).get("mode") === "reset" || new URLSearchParams(window.location.hash.slice(1)).get("type") === "invite");
     if (!supabase) { setAuthChecking(false); return; }
     supabase.auth.getSession().then(async ({ data }) => {
       if (data.session?.user) { setUser(data.session.user); await loadProfile(data.session.user); }
@@ -157,7 +157,7 @@ export default function Home() {
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
       if (!session?.user) setProfile(null);
-      if (event === "PASSWORD_RECOVERY") setResetMode(true);
+      if (event === "PASSWORD_RECOVERY" || new URLSearchParams(window.location.hash.slice(1)).get("type") === "invite") setResetMode(true);
     });
     return () => listener.subscription.unsubscribe();
   }, [supabase]);
@@ -490,7 +490,7 @@ export default function Home() {
 
   if (authChecking) return <main className="shell login-shell"><div className="hero"><div className="eyebrow">CROCODILE RIVER MINE</div><h1>Explosives <em>Management</em></h1><p className="intro">Checking your secure EMS session…</p></div></main>;
 
-  if (!user || !profile) return (
+  if (resetMode || !user || !profile) return (
     <main className="shell login-shell">
       <header className="topbar"><div className="brand"><img className="brand-logo" src="/crm-logo.svg" alt="Eastplats logo" /><div><strong>CROCODILE RIVER MINE</strong><span>EXPLOSIVES MANAGEMENT SYSTEM</span></div></div><div className="secure">SECURE ACCESS</div></header>
       <section className="hero">
@@ -499,7 +499,7 @@ export default function Home() {
         <p className="intro">One central magazine. Controlled stock movements. Clear accountability and traceable approvals.</p>
         <div className="panel">
           <div className="panel-title">{resetMode ? "SET A NEW PASSWORD" : resetEmailMode ? "CREATE YOUR PASSWORD" : "SYSTEM SIGN IN"}</div>
-          <p className="muted">{resetMode ? "Open the password reset email first, then create your new password." : resetEmailMode ? "We will email you a secure link to create your password." : "Sign in using your authorised EMS account."}</p>
+          <p className="muted">{resetMode ? "You have opened a secure password setup or reset link. Choose a new password to continue." : resetEmailMode ? "We will email you a secure link to create your password." : "Sign in using your authorised EMS account."}</p>
           {resetMode ? (
             <form onSubmit={saveNewPassword}>
               <label>New password</label><input type="password" autoComplete="new-password" minLength={10} value={newPassword} onChange={e=>setNewPassword(e.target.value)} required />
