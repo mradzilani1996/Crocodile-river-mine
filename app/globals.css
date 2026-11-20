@@ -301,3 +301,86 @@ td{font-size:12px;padding:15px 11px;line-height:1.45}
   footer { color: #333 !important; font-size: 9px !important; }
   a { color: #111 !important; text-decoration: none !important; }
 }
+
+
+/* User-friendly EMS workspace improvements */
+.ems-page{min-height:100vh;background:#f4f6f8;color:#17212b}
+.ems-pagebar{max-width:1500px;margin:0 auto 24px;padding:12px 16px;background:#fff;border:1px solid #e1e7e1;border-radius:12px;display:flex;align-items:center;justify-content:space-between;gap:18px;box-shadow:0 3px 14px rgba(20,40,25,.05)}
+.ems-pagebrand{display:flex;align-items:center;gap:10px;min-width:210px;color:#173b25;text-decoration:none}
+.ems-pagebrand img{width:42px;height:42px;object-fit:contain}
+.ems-pagebrand span{display:grid;gap:4px}
+.ems-pagebrand strong{font-size:12px;letter-spacing:.2px}
+.ems-pagebrand small{font-size:10px;color:#657366}
+.ems-page-links{display:flex;align-items:center;justify-content:center;gap:5px;flex-wrap:wrap}
+.ems-page-links a,.ems-page-home{padding:10px 12px;border-radius:7px;text-decoration:none;color:#405347;font-size:12px;font-weight:650;white-space:nowrap}
+.ems-page-links a:hover,.ems-page-links a.current{background:#eaf2e8;color:#174a28}
+.ems-page-home{background:#174a28;color:#fff}
+.ems-page-home:hover{background:#0e3b20}
+.ems-page :is(input,select,textarea){min-height:42px;border:1px solid #cbd5ce;border-radius:7px;background:#fff;color:#17251b;padding:10px 12px;font:inherit;max-width:100%}
+.ems-page textarea{min-height:88px;resize:vertical}
+.ems-page :is(input,select,textarea):focus-visible{outline:3px solid rgba(36,112,57,.18);border-color:#247039}
+.ems-page button{min-height:40px;border-radius:7px;transition:background .15s ease,transform .15s ease}
+.ems-page button:focus-visible,.app-shell button:focus-visible,.app-shell a:focus-visible{outline:3px solid rgba(243,195,35,.8);outline-offset:2px}
+.ems-page button:disabled{opacity:.55;cursor:not-allowed}
+.ems-page table{border-collapse:collapse;width:100%;font-size:12px}
+.ems-page th{background:#f0f4ef;color:#425447;font-size:10px;letter-spacing:.45px;text-transform:uppercase;text-align:left}
+.ems-page td,.ems-page th{padding:11px 12px;border-bottom:1px solid #e6ebe6;vertical-align:top}
+.ems-page tr:hover td{background:#fbfdfb}
+.ems-page h1{color:#173b25;letter-spacing:-.5px}
+.ems-page h2{color:#173b25;font-size:19px}
+.ems-page h3{color:#23432c}
+.ems-page p{line-height:1.6}
+.ems-page a{transition:color .15s ease,background .15s ease}
+.ems-page :is(section,article){scroll-margin-top:90px}
+.ems-page :is(button,a){touch-action:manipulation}
+.ems-page .error,.ems-page [role="alert"]{color:#922b22}
+.ems-page .success,.ems-page [role="status"]{color:#1d6a36}
+.app-shell .sidebar{position:sticky;top:0;height:100vh;overflow-y:auto;overscroll-behavior:contain}
+.app-shell .nav-item{min-height:42px;font-size:13px;border-radius:7px}
+.app-shell .nav-caption{font-size:10px;letter-spacing:1px}
+.app-shell .app-top{position:sticky;top:0;z-index:20;min-height:82px;height:auto}
+.app-shell .content{padding-top:26px;padding-bottom:36px}
+.app-shell .stat-card,.app-shell .data-card{border-radius:10px;box-shadow:0 2px 10px rgba(20,40,25,.035)}
+.app-shell .stat-card{padding:18px}
+.app-shell .stat-card>span{letter-spacing:.7px}
+.app-shell .stat-card small{line-height:1.5}
+.app-shell .nav-item:focus-visible{outline:2px solid #f3c323;outline-offset:2px}
+@media(max-width:1000px){
+ .ems-pagebar{align-items:flex-start;flex-wrap:wrap}
+ .ems-page-links{order:3;width:100%;justify-content:flex-start;overflow-x:auto;flex-wrap:nowrap;padding-bottom:3px}
+ .ems-page-links a{font-size:11px}
+ .app-shell{display:block}
+ .app-shell .sidebar{position:sticky;top:0;width:100%;height:auto;min-height:0;max-height:45vh;overflow-y:auto;padding:10px 12px;z-index:40;box-shadow:0 4px 14px rgba(0,0,0,.12)}
+ .app-shell .side-brand{padding:2px 4px 10px}
+ .app-shell .side-brand .mark,.app-shell .side-brand .side-logo{width:32px;height:32px}
+ .app-shell .nav-caption{margin:12px 5px 5px}
+ .app-shell .nav-item{display:inline-flex;margin:2px;padding:9px 10px;min-height:38px}
+ .app-shell .side-bottom{margin-top:10px;padding-top:10px}
+ .app-shell .app-top{position:relative;padding:18px 20px;min-height:0}
+ .app-shell .content{padding:20px}
+}
+@media(max-width:620px){
+ .ems-page{padding:14px!important}
+ .ems-pagebar{padding:10px;border-radius:9px;gap:10px}
+ .ems-pagebrand{min-width:0;flex:1}
+ .ems-pagebrand img{width:34px;height:34px}
+ .ems-pagebrand strong{font-size:11px}
+ .ems-pagebrand small{font-size:9px}
+ .ems-page-home{padding:9px 10px;font-size:11px}
+ .ems-page-links a{padding:9px 10px}
+ .ems-page table{min-width:680px}
+ .ems-page :is(section,article){max-width:100%}
+ .app-shell .sidebar{max-height:50vh}
+ .app-shell .side-brand strong{font-size:9px}
+ .app-shell .side-brand span{font-size:7px}
+ .app-shell .nav-caption{font-size:8px;margin-top:9px}
+ .app-shell .nav-item{font-size:11px;padding:8px}
+ .app-shell .app-top{padding:14px 16px}
+ .app-shell .app-top h1{font-size:19px}
+ .app-shell .content{padding:15px}
+ .app-shell .welcome-row{align-items:flex-start;gap:12px;flex-wrap:wrap}
+ .app-shell .stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .app-shell .stat-card{padding:13px}
+ .app-shell .stat-card strong{font-size:23px}
+}
+@media(prefers-reduced-motion:reduce){.ems-page *,.app-shell *{scroll-behavior:auto!important;transition:none!important}}
