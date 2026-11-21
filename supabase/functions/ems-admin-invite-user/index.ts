@@ -50,7 +50,7 @@ Deno.serve(async (req: Request) => {
     return respond({ error: "Only the active System Administrator can invite staff." }, 403);
   }
 
-  let payload: { full_name?: string; email?: string; role?: string };
+  let payload: { full_name?: string; email?: string; password?: string; role?: string };
   try {
     payload = await req.json();
   } catch {
@@ -60,21 +60,21 @@ Deno.serve(async (req: Request) => {
   const fullName = String(payload.full_name || "").trim();
   const email = String(payload.email || "").trim().toLowerCase();
   const role = String(payload.role || "").trim();
+  const password = String(payload.password || "");
   const allowedRoles = ["issuer", "magazine_master", "authorising_officer", "management"];
 
   if (fullName.length < 2 || fullName.length > 120) return respond({ error: "Enter a valid full name." }, 400);
   if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return respond({ error: "Enter a valid work email address." }, 400);
+  if (password.length < 12 || password.length > 128) return respond({ error: "Set an initial password between 12 and 128 characters." }, 400);
   if (!allowedRoles.includes(role)) return respond({ error: "Choose an approved operational EMS role. Administrator access cannot be granted through invitations." }, 400);
 
   const redirectTo = Deno.env.get("EMS_APP_URL") || "https://crocodileems.vercel.app/";
   const { data: inviteData, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
-    data: { full_name: fullName },
-    redirectTo,
+    data: { full_name: fullName }, redirectTo,
   });
-
-  if (inviteError || !inviteData.user) {
-    return respond({ error: inviteError?.message || "Supabase did not return the invited account." }, 400);
-  }
+  if (inviteError || !inviteData.user) return respond({ error: inviteError?.message || "Supabase did not return the invited account." }, 400);
+  const { error: passwordError } = await adminClient.auth.admin.updateUserById(inviteData.user.id, { password });
+  if (passwordError) { await adminClient.auth.admin.deleteUser(inviteData.user.id); return respond({ error: passwordError.message }, 400); }
 
   const { error: createProfileError } = await adminClient.from("ems_profiles").insert({
     user_id: inviteData.user.id,
