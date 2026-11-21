@@ -29,7 +29,7 @@ export default function ApprovalsPage(){
    db.from("ems_stocktakes").select("*,ems_explosive_products(product_code,product_name,unit_of_measure)").eq("status","pending_verification").order("count_date",{ascending:true})
   ]);
   const labels=["Stock movements","Daily requests","Product approvals","Supplier orders","Supplier order items","Stocktake approvals"];
-  for(let i=0;i<results.length;i++){if(results[i].error){setError(labels[i] ? labels[i]+": "+results[i].error.message : results[i].error.message);}}
+  for(let i=0;i<results.length;i++){const issue=results[i].error;if(issue){setError(labels[i] ? labels[i]+": "+issue.message : issue.message);}}
   setMovements(results[0].data||[]);setDaily(results[1].data||[]);setDailyItems(results[2].data||[]);setProducts(results[3].data||[]);setPurchase(results[4].data||[]);setPurchaseItems(results[5].data||[]);setStocktakes(results[6].data||[]);
   setLoading(false);
  }
