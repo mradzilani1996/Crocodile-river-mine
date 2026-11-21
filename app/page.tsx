@@ -576,7 +576,7 @@ export default function Home() {
 
   if (resetMode || !user || !profile) return (
     <main className="shell login-shell">
-      <header className="topbar"><div className="brand"><img className="brand-logo" src="/images/eastplats-reference-logo.svg" alt="Uploaded EASTPLATS logo" /><div><strong>CROCODILE RIVER MINE</strong><span>EXPLOSIVES MANAGEMENT SYSTEM</span></div></div><div className="secure">SECURE ACCESS</div></header>
+      <header className="topbar"><div className="brand"><img className="brand-logo" src="/images/eastplats-reference-logo.svg?v=3" alt="Crocodile River Mine logo" style={{display:"block",width:230,height:70,objectFit:"contain",flexShrink:0,background:"#ffffff",padding:"4px",borderRadius:4}} /><div><strong>CROCODILE RIVER MINE</strong><span>EXPLOSIVES MANAGEMENT SYSTEM</span></div></div><div className="secure">SECURE ACCESS</div></header>
       <section className="hero">
         <div className="eyebrow">CONTROLLED INVENTORY · TRACEABLE APPROVALS</div>
         <h1>Explosives <em>Management</em></h1>
