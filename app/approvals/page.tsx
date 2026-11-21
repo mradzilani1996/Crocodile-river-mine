@@ -51,9 +51,14 @@ export default function ApprovalsPage(){
  async function recordApproval(entityType:string,id:string,stage:string,decision:string,comments:string){const {error:e}=await db!.rpc("ems_record_approval_acknowledgement",{p_entity_type:entityType,p_entity_id:id,p_approval_stage:stage,p_decision:decision,p_comments:comments||null});if(e)setError("Action completed, but approval acknowledgement failed: "+e.message);}
  async function decideMovement(r:Row,decision:"shiftboss_approved"|"posted"|"rejected"){
   if(!db||!user)return;
+  const action=decision==="shiftboss_approved"?"Shiftboss approval":decision==="posted"?"Final stock movement approval":"Stock movement rejection";
+  if(!window.confirm(`I confirm that I have reviewed this stock movement and personally acknowledge this ${action.toLowerCase()}.`))return;
+  const comments=notes[r.id]||"";
+  const stage=isAdmin?"admin":r.status==="pending_approval"?"shift_boss":"mine_manager";
   const next=decision==="shiftboss_approved"?"pending_approval":r.status;
-  await finish(db.from("ems_stock_transactions").update({status:decision,approval_comments:notes[r.id]||null}).eq("id",r.id).eq("status",next),
+  const ok=await finish(db.from("ems_stock_transactions").update({status:decision,approval_comments:comments||null}).eq("id",r.id).eq("status",next),
    decision==="shiftboss_approved"?"Shiftboss approval recorded. Sent to Management.":decision==="posted"?"Manager approved the movement and the stock balance is updated.":"Movement rejected; stock was not changed.");
+  if(ok)await recordApproval("stock_transaction",r.id,stage,decision==="rejected"?"rejected":"approved",comments);
  }
  async function decideDaily(r:Row,decision:"approve"|"reject"){
   if(!db)return;const items=dailyItems.filter(i=>i.order_id===r.id);
