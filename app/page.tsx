@@ -32,8 +32,9 @@ export default function Home() {
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [resetMode, setResetMode] = useState(false);
-  const [resetEmailMode, setResetEmailMode] = useState(false);
-  const [resetRequested, setResetRequested] = useState(false);
+  const [resetUserId, setResetUserId] = useState("");
+  const [adminResetPassword, setAdminResetPassword] = useState("");
+  const [adminResetConfirm, setAdminResetConfirm] = useState("");
   const [section, setSection] = useState("overview");
   const [magazine, setMagazine] = useState<Magazine | null>(null);
   const [magazineName, setMagazineName] = useState("");
@@ -177,15 +178,6 @@ export default function Home() {
     else if (data.user) await loadProfile(data.user);
     setBusy(false);
   }
-  async function requestReset(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!supabase) return setError("The website authentication settings are not configured yet.");
-    setBusy(true); setError(""); setNotice("");
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: window.location.origin + "/?mode=reset" });
-    if (resetError) setError(resetError.message);
-    else { setResetRequested(true); setNotice("If this email belongs to an EMS account, a password reset link will be sent. Check your inbox and spam folder."); }
-    setBusy(false);
-  }
   async function saveNewPassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!supabase) return;
@@ -317,11 +309,29 @@ export default function Home() {
       body: { full_name: inviteFullName.trim(), email: inviteEmail.trim(), password: invitePassword, role: inviteRole }
     });
     if (inviteError || data?.error) {
-      setError("Staff invitation could not be sent: " + (inviteError?.message || data?.error || "Unknown error"));
+      setError("Staff account could not be created: " + (inviteError?.message || data?.error || "Unknown error"));
     } else {
-      setNotice("Staff account created for " + inviteEmail.trim() + ". The administrator-set password is active. The account setup email also provides a secure way for the employee to choose a different password.");
+      setNotice("Staff account created for " + inviteEmail.trim() + ". The employee can sign in with the password set by Admin.");
       setInviteFullName(""); setInviteEmail(""); setInvitePassword(""); setInviteRole("issuer");
       await loadDashboard();
+    }
+    setBusy(false);
+  }
+
+  async function resetEMSUserPassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!supabase || profile?.role !== "admin" || !resetUserId) return;
+    if (adminResetPassword.length < 12) { setError("Use at least 12 characters for the new password."); return; }
+    if (adminResetPassword !== adminResetConfirm) { setError("The new passwords do not match."); return; }
+    setBusy(true); setError(""); setNotice("");
+    const { data, error: resetError } = await supabase.functions.invoke("ems-admin-reset-password", {
+      body: { user_id: resetUserId, password: adminResetPassword }
+    });
+    if (resetError || data?.error) setError("Password could not be reset: " + (resetError?.message || data?.error || "Unknown error"));
+    else {
+      const target = profiles.find(person => person.user_id === resetUserId);
+      setNotice("Password reset successfully for " + (target?.full_name || "the selected employee") + ". Give the new password to them securely.");
+      setResetUserId(""); setAdminResetPassword(""); setAdminResetConfirm("");
     }
     setBusy(false);
   }
@@ -548,24 +558,14 @@ export default function Home() {
         <h1>Explosives <em>Management</em></h1>
         <p className="intro">One central magazine. Controlled stock movements. Clear accountability and traceable approvals.</p>
         <div className="panel">
-          <div className="panel-title">{resetMode ? "SET A NEW PASSWORD" : resetEmailMode ? "CREATE YOUR PASSWORD" : "SYSTEM SIGN IN"}</div>
-          <p className="muted">{resetMode ? "You have opened a secure password setup or reset link. Choose a new password to continue." : resetEmailMode ? "We will email you a secure link to create your password." : "Sign in using your authorised EMS account."}</p>
+          <div className="panel-title">{resetMode ? "SET A NEW PASSWORD" : "SYSTEM SIGN IN"}</div>
+          <p className="muted">{resetMode ? "Choose a new password to continue." : "Sign in using your authorised EMS account."}</p>
           {resetMode ? (
             <form onSubmit={saveNewPassword}>
-              <label>New password</label><input type="password" autoComplete="new-password" minLength={10} value={newPassword} onChange={e=>setNewPassword(e.target.value)} required />
+              <label>New password</label><input type="password" autoComplete="new-password" minLength={12} value={newPassword} onChange={e=>setNewPassword(e.target.value)} required />
               <button disabled={busy}>{busy ? "Updating…" : "Update password"}</button>
               <button type="button" className="link-button" onClick={()=>{setResetMode(false);setError("");setNotice("");}}>Back to sign in</button>
             </form>
-          ) : resetEmailMode ? (
-            resetRequested ? (
-              <div><p className="muted">If this email belongs to an EMS account, a password setup link has been sent. Check your inbox and spam folder.</p><button type="button" className="link-button" onClick={()=>{setResetEmailMode(false);setResetRequested(false);setError("");setNotice("");}}>Back to sign in</button></div>
-            ) : (
-              <form onSubmit={requestReset}>
-                <label>Authorised EMS email address</label><input type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} required />
-                <button disabled={busy}>{busy ? "Sending link…" : "Send password setup link"}</button>
-                <button type="button" className="link-button" onClick={()=>{setResetEmailMode(false);setError("");setNotice("");}}>Back to sign in</button>
-              </form>
-            )
           ) : (
             <>
               <form onSubmit={signIn}>
@@ -573,7 +573,7 @@ export default function Home() {
                 <label>Password</label><input type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} required />
                 <button disabled={busy}>{busy ? "Signing in…" : "Sign in securely"}</button>
               </form>
-              <button type="button" className="link-button" onClick={()=>{setResetEmailMode(true);setResetRequested(false);setError("");setNotice("");}}>Create your password / Forgot password</button>
+              <p className="muted">Forgot your password? Contact the System Administrator. They can reset it inside Manage Users. No email is required.</p>
             </>
           )}
           {notice && <div className="feedback success">{notice}</div>}
@@ -655,23 +655,33 @@ export default function Home() {
             {profile?.role === "admin" ? <>
               <div className="card-heading"><div><h3>Staff access and responsibilities</h3><p>Invite staff, assign their mine role and deactivate access when they leave or change duties.</p></div><span className="role-pill">{activePeople.length} active</span></div>
               <form className="order-form" onSubmit={inviteEMSUser}>
-                <h4>Invite a staff member</h4>
+                <h4>Create a staff account</h4>
                 <div className="order-fields">
                   <label>Full name<input value={inviteFullName} onChange={e=>setInviteFullName(e.target.value)} required placeholder="Staff member's full name" /></label>
                   <label>Work email<input type="email" value={inviteEmail} onChange={e=>setInviteEmail(e.target.value)} required placeholder="name@company.co.za" /></label>
                   <label>Set account password<input type="password" autoComplete="new-password" minLength={12} value={invitePassword} onChange={e=>setInvitePassword(e.target.value)} required placeholder="At least 12 characters" /></label>
                   <label>EMS role<select value={inviteRole} onChange={e=>setInviteRole(e.target.value)}><option value="issuer">Issuer</option><option value="magazine_master">Magazine Master</option><option value="authorising_officer">Authorising Officer</option><option value="management">Management</option></select></label>
                 </div>
-                <div className="info-note">The administrator sets the staff member’s initial sign-in password. Give it to the employee securely and ask them not to share it. If they forget it, they can select “Create your password / Forgot password” on the login page and receive a secure reset link. Administrator access is not assignable from this screen.</div>
+                <div className="info-note">The administrator sets the initial sign-in password. If a staff member forgets it, use Reset password in the staff list below. No password reset emails are sent. Administrator access is not assignable from this screen.</div>
                 <button className="primary-btn" disabled={busy || invitePassword.length < 12}>{busy ? "Creating account…" : "Create staff account"}</button>
               </form>
               <div className="table-wrap"><table><thead><tr><th>NAME</th><th>EMAIL</th><th>ROLE</th><th>ACCESS</th></tr></thead><tbody>{profiles.map(p=><tr key={p.user_id}>
                 <td><b>{p.full_name}</b>{p.user_id===user?.id?<div className="order-subtext">Your administrator account</div>:null}</td>
                 <td>{p.email}</td>
                 <td>{p.user_id===user?.id?<span className="capitalize">{p.role.replaceAll("_"," ")}</span>:<select value={p.role} disabled={busy} onChange={e=>updateEMSUser(p,{role:e.target.value})}><option value="issuer">Issuer</option><option value="magazine_master">Magazine Master</option><option value="authorising_officer">Authorising Officer</option><option value="management">Management</option></select>}</td>
-                <td>{p.user_id===user?.id?<span className="state approved">Active</span>:<button type="button" className="mini-action" disabled={busy} onClick={()=>updateEMSUser(p,{is_active:!p.is_active})}>{p.is_active?"Deactivate":"Reactivate"}</button>}</td>
+                <td>{p.user_id===user?.id?<span className="state approved">Active</span>:<><button type="button" className="mini-action" disabled={busy} onClick={()=>updateEMSUser(p,{is_active:!p.is_active})}>{p.is_active?"Deactivate":"Reactivate"}</button><button type="button" className="mini-action" disabled={busy || !p.is_active} onClick={()=>{setResetUserId(p.user_id);setAdminResetPassword("");setAdminResetConfirm("");setError("");setNotice("");}}>Reset password</button></>}</td>
               </tr>)}</tbody></table></div>
-              <p className="table-footnote">Only the system administrator can manage staff accounts. Role and access changes are recorded in the activity history.</p>
+              {resetUserId && <form className="order-form" onSubmit={resetEMSUserPassword}>
+                <h4>Reset password — {profiles.find(person=>person.user_id===resetUserId)?.full_name || "Selected employee"}</h4>
+                <div className="order-fields">
+                  <label>New password<input type="password" autoComplete="new-password" minLength={12} value={adminResetPassword} onChange={e=>setAdminResetPassword(e.target.value)} required placeholder="At least 12 characters" /></label>
+                  <label>Confirm new password<input type="password" autoComplete="new-password" minLength={12} value={adminResetConfirm} onChange={e=>setAdminResetConfirm(e.target.value)} required placeholder="Enter the password again" /></label>
+                </div>
+                <div className="info-note">The new password takes effect immediately. Give it directly to the employee using a secure method. The system does not email passwords.</div>
+                <button className="primary-btn" disabled={busy || adminResetPassword.length<12 || adminResetPassword!==adminResetConfirm}>{busy?"Saving…":"Save new password"}</button>
+                <button type="button" className="mini-action" disabled={busy} onClick={()=>{setResetUserId("");setAdminResetPassword("");setAdminResetConfirm("");}}>Cancel</button>
+              </form>}
+              <p className="table-footnote">Only the system administrator can manage staff accounts. Role, access and password-reset actions are recorded in the activity history.</p>
             </> : <div className="empty-state">Only the System Administrator can manage EMS staff accounts.</div>}
           </section>}
           {section === "products" && <>
