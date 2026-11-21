@@ -42,7 +42,7 @@ export default function ApprovalsPage(){
   stocktakes:(isManager||isAdmin)?stocktakes.length:0
  };
  const total=Object.values(counts).reduce((a,b)=>a+b,0);
- async function finish(promise:Promise<any>,success:string){setBusy(true);setError("");setNotice("");const {error:e}=await promise;if(e)setError(e.message);else{setNotice(success);setNotes({});await load();}setBusy(false);}
+ async function finish(promise:PromiseLike<any>,success:string){setBusy(true);setError("");setNotice("");const {error:e}=await promise;if(e)setError(e.message);else{setNotice(success);setNotes({});await load();}setBusy(false);}
  async function decideMovement(r:Row,decision:"shiftboss_approved"|"posted"|"rejected"){
   if(!db||!user)return;
   const next=decision==="shiftboss_approved"?"pending_approval":r.status;
