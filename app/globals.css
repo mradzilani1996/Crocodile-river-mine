@@ -209,6 +209,7 @@ td{font-size:12px;padding:15px 11px;line-height:1.45}
 .balance-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
 .balance-card{display:flex;flex-direction:column;gap:7px;padding:17px 18px;border:1px solid #dfe7df;border-left:3px solid #0b5a2a;border-radius:7px;background:#fbfdfb;min-width:0}
 .balance-card>span{font-size:10px;font-weight:800;letter-spacing:1px;color:#617063}
+.balance-card>.balance-caption{font-size:10px;font-weight:800;letter-spacing:1.2px;color:#617063;margin-top:5px}
 .balance-card>strong{font-size:28px;line-height:1.15;color:#123d22;font-variant-numeric:tabular-nums}
 .balance-card>small{font-size:11px;color:#5f6d61;line-height:1.45}
 .balance-card>em{font-size:10px;font-style:normal;color:#6c792d;font-weight:700}
