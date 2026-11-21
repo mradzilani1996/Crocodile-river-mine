@@ -492,3 +492,8 @@ td{font-size:12px;padding:15px 11px;line-height:1.45}
  .app-shell .sidebar .side-brand strong{font-size:10px!important}
  .app-shell .sidebar .side-brand span{font-size:8px!important}
 }
+
+/* Restore the uploaded Eastplats logo at a readable size on all screens. */
+.login-shell .brand-logo{width:280px;height:88px;flex:0 0 280px;object-fit:contain;object-position:left center;padding:0!important}
+.app-shell .sidebar .side-brand .side-logo{width:150px;height:72px;flex:0 0 150px;max-width:48%;object-fit:contain;object-position:center;padding:0}
+@media(max-width:650px){.login-shell .brand-logo{width:170px!important;height:58px!important;flex:0 0 170px!important}.app-shell .sidebar .side-brand .side-logo{width:128px!important;height:62px!important;flex:0 0 128px!important;max-width:44vw}}
