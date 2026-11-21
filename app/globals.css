@@ -498,3 +498,29 @@ td{font-size:12px;padding:15px 11px;line-height:1.45}
 .login-shell .brand-logo{width:280px;height:88px;flex:0 0 280px;object-fit:contain;object-position:left center;padding:0!important}
 .app-shell .sidebar .side-brand .side-logo{width:150px;height:72px;flex:0 0 150px;max-width:48%;object-fit:contain;object-position:center;padding:0}
 @media(max-width:650px){.login-shell .brand-logo{width:170px!important;height:58px!important;flex:0 0 170px!important}.app-shell .sidebar .side-brand .side-logo{width:128px!important;height:62px!important;flex:0 0 128px!important;max-width:44vw}}
+
+
+/* Unified official Eastplats logo treatment on login and dashboard */
+.login-shell .brand-logo{
+  display:block!important;width:270px!important;height:86px!important;
+  flex:0 0 270px!important;max-width:40vw!important;min-width:0!important;
+  object-fit:contain!important;object-position:center!important;
+  background:#fff!important;border:2px solid #f3c323!important;
+  border-radius:8px!important;padding:8px 12px!important;
+  opacity:1!important;visibility:visible!important;
+}
+.app-shell .sidebar .side-brand .side-logo{
+  display:block!important;width:178px!important;height:78px!important;
+  flex:0 0 178px!important;max-width:100%!important;
+  object-fit:contain!important;object-position:center!important;
+  background:#fff!important;border:2px solid #f3c323!important;
+  border-radius:8px!important;padding:8px 10px!important;
+  opacity:1!important;visibility:visible!important;
+}
+@media(max-width:850px){
+ .login-shell .brand-logo{width:210px!important;height:70px!important;flex-basis:210px!important}
+}
+@media(max-width:650px){
+ .login-shell .brand-logo{width:145px!important;height:56px!important;flex-basis:145px!important;max-width:44vw!important}
+ .app-shell .sidebar .side-brand .side-logo{width:125px!important;height:60px!important;flex-basis:125px!important;max-width:44vw!important}
+}
