@@ -541,7 +541,7 @@ export default function Home() {
 
   if (resetMode || !user || !profile) return (
     <main className="shell login-shell">
-      <header className="topbar"><div className="brand"><img className="brand-logo" src="/crm-logo.svg" alt="Eastplats logo" /><div><strong>CROCODILE RIVER MINE</strong><span>EXPLOSIVES MANAGEMENT SYSTEM</span></div></div><div className="secure">SECURE ACCESS</div></header>
+      <header className="topbar"><div className="brand"><img className="brand-logo" src="https://s3-symbol-logo.tradingview.com/eastern-platinum--600.png" alt="Official EASTPLATS corporate logo" /><div><strong>CROCODILE RIVER MINE</strong><span>EXPLOSIVES MANAGEMENT SYSTEM</span></div></div><div className="secure">SECURE ACCESS</div></header>
       <section className="hero">
         <div className="eyebrow">CONTROLLED INVENTORY · TRACEABLE APPROVALS</div>
         <h1>Explosives <em>Management</em></h1>
@@ -588,7 +588,7 @@ export default function Home() {
   return (
     <main className="app-shell">
       <aside className="sidebar">
-        <div className="side-brand"><img className="side-logo" src="/crm-logo.svg" alt="Eastplats logo" /><div><strong>CROCODILE RIVER MINE</strong><span>EXPLOSIVES MANAGEMENT</span></div></div>
+        <div className="side-brand"><img className="side-logo" src="https://s3-symbol-logo.tradingview.com/eastern-platinum--600.png" alt="Official EASTPLATS corporate logo" /><div><strong>CROCODILE RIVER MINE</strong><span>EXPLOSIVES MANAGEMENT</span></div></div>
         <div className="nav-caption">MAIN MENU</div>
         <button className={section === "overview" ? "nav-item active" : "nav-item"} onClick={() => setSection("overview")}>▤ <span>Home</span></button>
         <button className={section === "products" ? "nav-item active" : "nav-item"} onClick={() => setSection("products")}>▤ <span>Product register</span></button>
