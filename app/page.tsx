@@ -18,14 +18,7 @@ type PurchaseDelivery = { id:string; delivery_number:number; order_id:string; su
 type PurchaseDeliveryItem = { id:string; delivery_id:string; order_item_id:string; quantity_received:number; notes:string|null };
 
 function EastplatsLogo({ className }: { className: string }) {
-  return (
-    <svg className={className} viewBox="0 0 470 120" role="img" aria-label="Eastplats corporate logo" xmlns="http://www.w3.org/2000/svg">
-      <path d="M66 7 52 11 43 20 32 23 26 34 17 39 20 51 13 61 18 72 15 82 23 91 29 104 41 111 50 105 57 93 61 79 69 67 75 54 73 42 82 31 76 22 68 17Z" fill="#17613d"/>
-      <path d="M41 96 50 105 57 93 61 79 54 82 48 91Z" fill="#f2c52b"/>
-      <path d="M74 37 87 30 97 34 106 28 115 33 111 42 99 45 90 42 82 49Z" fill="#17613d"/>
-      <text x="116" y="83" fontFamily="Arial, Helvetica, sans-serif" fontSize="58" fontWeight="700" letterSpacing="1.2" fill="#ffffff" stroke="#17613d" strokeWidth="2.6" paintOrder="stroke">EASTPLATS</text>
-    </svg>
-  );
+  return <img className={className} src="/images/eastplats-reference-logo.svg" alt="Eastplats Barplats Mines logo" />;
 }
 
 export default function Home() {
