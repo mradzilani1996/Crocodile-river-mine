@@ -861,7 +861,7 @@ export default function Home() {
             <section className="data-card wide-card">
               <div className="card-heading"><div><h3>Magazine stock position</h3><p>Calculated from posted receipts, issues, returns and authorised adjustments only.</p></div><span className="role-pill">{controlBookRows.length} posted movements</span></div>
               <div className="balance-grid">
-                {controlBookBalances.map(({product,section,balance}) => <article className="balance-card" key={product.id+"-"+section}><span>{section} · {product.product_code}</span><strong>{balance.toLocaleString("en-ZA",{maximumFractionDigits:3})}</strong><small>{product.product_name} · {product.unit_of_measure}</small><em>{balance <= Number(product.minimum_stock) ? "At or below minimum stock" : "Above minimum stock"}</em></article>)}
+                {controlBookBalances.map(({product,section,balance}) => <article className="balance-card" key={product.id+"-"+section}><span>{section} register</span><small>Product code: {product.product_code}</small><div className="balance-caption">AVAILABLE BALANCE</div><strong>{balance.toLocaleString("en-ZA",{maximumFractionDigits:3})}</strong><small>{product.product_name} · {product.unit_of_measure}</small><em>{balance <= Number(product.minimum_stock) ? "At or below minimum stock" : "Above minimum stock"}</em></article>)}
                 {controlBookBalances.length===0 && <div className="empty-state">Add mine-approved products to the Product Register to see their balances.</div>}
               </div>
             </section>
