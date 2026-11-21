@@ -176,7 +176,7 @@ td{font-size:12px;padding:15px 11px;line-height:1.45}
 
 /* Restore the polished mining-industry sign-in layout */
 .login-shell .topbar{height:94px;border-bottom:1px solid #ffffff30}
-.login-shell .brand-logo{width:210px;height:66px;object-fit:contain;object-position:left center}
+.login-shell .brand-logo{width:210px;height:66px;object-fit:cover;object-position:center}
 .login-shell .brand>div{padding-left:15px;border-left:1px solid #ffffff50}
 .login-shell .brand strong{font-size:13px;letter-spacing:1.8px;color:#fff}
 .login-shell .brand span{font-size:9px;letter-spacing:1.5px;color:#d5e2d2}
