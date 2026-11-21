@@ -20,7 +20,9 @@ export default function TaskNotificationBar(){
     const {data:profile}=await db.from("ems_profiles").select("role,is_active").eq("user_id",user.id).maybeSingle() as {data:Profile|null};
     if(!profile?.is_active){setTasks([]);setNotifications([]);return;}
     const {data:noticeRows}=await db.from("ems_user_notifications").select("id,title,message,href,created_at").eq("recipient_user_id",user.id).is("read_at",null).order("created_at",{ascending:false}).limit(10);
-    const incoming=(noticeRows||[]) as UserNotification[];\n    setNotifications(incoming);\n    if(incoming.length>0)setExpanded(true);
+    const incoming=(noticeRows||[]) as UserNotification[];
+    setNotifications(incoming);
+    if(incoming.length>0)setExpanded(true);
     const role=profile.role||"";
     const admin=role==="admin", shift=role==="authorising_officer", manager=role==="management";
     const jobs:PromiseLike<any>[]=[];
@@ -56,7 +58,8 @@ export default function TaskNotificationBar(){
       .on("postgres_changes",{event:"*",schema:"public",table:"ems_daily_orders"},refresh)
       .on("postgres_changes",{event:"*",schema:"public",table:"ems_explosive_products"},refresh)
       .on("postgres_changes",{event:"*",schema:"public",table:"ems_purchase_orders"},refresh)
-      .on("postgres_changes",{event:"*",schema:"public",table:"ems_user_notifications",filter:`recipient_user_id=eq.${user.id}`},refresh)\n      .on("postgres_changes",{event:"*",schema:"public",table:"ems_stocktakes"},refresh)
+      .on("postgres_changes",{event:"*",schema:"public",table:"ems_user_notifications",filter:`recipient_user_id=eq.${user.id}`},refresh)
+      .on("postgres_changes",{event:"*",schema:"public",table:"ems_stocktakes"},refresh)
       .on("postgres_changes",{event:"*",schema:"public",table:"ems_incidents"},refresh)
       .on("postgres_changes",{event:"*",schema:"public",table:"ems_inspections"},refresh)
       .subscribe();
