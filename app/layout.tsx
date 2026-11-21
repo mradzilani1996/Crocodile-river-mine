@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import TaskNotificationBar from "@/components/task-notification-bar";
 
 export const metadata: Metadata = {
   title: "Crocodile River Mine | Explosives Management System",
@@ -7,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en"><body>{children}</body></html>;
+  return <html lang="en"><body><TaskNotificationBar />{children}</body></html>;
 }
