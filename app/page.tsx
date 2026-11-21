@@ -319,7 +319,7 @@ export default function Home() {
     if (inviteError || data?.error) {
       setError("Staff invitation could not be sent: " + (inviteError?.message || data?.error || "Unknown error"));
     } else {
-      setNotice("Invitation sent to " + inviteEmail.trim() + ". The staff member must use the email link to set their password.");
+      setNotice("Staff account created for " + inviteEmail.trim() + ". The administrator-set password is active. The account setup email also provides a secure way for the employee to choose a different password.");
       setInviteFullName(""); setInviteEmail(""); setInvitePassword(""); setInviteRole("issuer");
       await loadDashboard();
     }
