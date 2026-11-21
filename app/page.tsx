@@ -521,13 +521,12 @@ export default function Home() {
   const pendingStock = pendingMovementCount;
   const pendingDaily = dailyOrders.filter(o => o.status === "submitted").length;
   const pendingProducts = products.filter(p => p.approval_status === "pending_approval").length;
-  const pendingSupplierOrders = purchaseOrders.filter(o => ["pending_shift_boss","pending_magazine_master","pending_mine_overseer"].includes(o.status)).length;
+  const pendingSupplierOrders = purchaseOrders.filter(o => ["pending_shift_boss","pending_mine_overseer"].includes(o.status)).length;
   const pending = pendingStock + pendingDaily + pendingProducts + pendingSupplierOrders;
   const canManageMagazine = profile?.role === "admin";
   const canApproveOrders = profile?.role === "admin" || profile?.role === "authorising_officer";
   const canFulfilOrders = profile?.role === "admin" || profile?.role === "magazine_master" || profile?.role === "issuer";
   const canShiftBossReview = profile?.role === "admin" || profile?.role === "authorising_officer";
-  const canMagazineMasterReview = profile?.role === "admin" || profile?.role === "magazine_master";
   const canMineOverseerReview = profile?.role === "admin" || profile?.role === "management";
   const canPlacePurchaseOrder = profile?.role === "admin" || profile?.role === "magazine_master";
   const canRecordPurchaseDelivery = profile?.role === "admin" || profile?.role === "magazine_master";
@@ -762,7 +761,7 @@ export default function Home() {
                   <td>{new Date(o.order_date+"T00:00:00").toLocaleDateString("en-ZA")}<div className="order-subtext">{o.shift} shift</div></td>
                   <td>{o.miner_name}<div className="order-subtext">{o.miner_company_number}</div></td>
                   <td>{o.requester_name}</td><td>{o.work_area}{o.blast_site ? <div className="order-subtext">{o.blast_site}</div> : null}</td>
-                  <td><span className={"state "+(o.status==="approved"?"approved":o.status==="rejected"?"rejected":o.status==="fulfilled"?"posted":"pending_approval")}>{o.status.replaceAll("_"," ")}</span></td>
+                  <td><span className={"state "+(o.status==="approved"?"approved":o.status==="rejected"?"rejected":o.status==="fulfilled"?"posted":"pending_approval")}>{o.status==="pending_shift_boss"?"Awaiting Shiftboss signature":o.status==="pending_mine_overseer"?"Awaiting Mine Manager signature":o.status.replaceAll("_"," ")}</span></td>
                   <td>
                     {canApproveOrders && o.status==="submitted" && <div style={{display:"grid",gap:6,minWidth:150}}><input aria-label="Approval or rejection notes" placeholder="Notes / rejection reason" value={dailyApprovalNotes[o.id]||""} onChange={e=>setDailyApprovalNotes({...dailyApprovalNotes,[o.id]:e.target.value})}/><span className="action-pair"><button className="mini-action" disabled={busy} onClick={()=>updateDailyOrder(o,"approve")}>Approve quantities</button><button className="mini-action danger" disabled={busy} onClick={()=>updateDailyOrder(o,"reject")}>Reject</button></span></div>}
                     {canPrepareIssue && dailyIssueOrderId!==o.id && <button className="mini-action" disabled={busy} onClick={()=>{setDailyIssueOrderId(o.id);setDailyIssueAck(false);}}>{o.status==="approved"?"Prepare issue":"Issue remaining"}</button>}
@@ -798,7 +797,7 @@ export default function Home() {
                   <label>Line notes<input value={line.notes} onChange={e=>setPurchaseLines(purchaseLines.map((x,i)=>i===index?{...x,notes:e.target.value}:x))} placeholder="Optional item notes" /></label>
                   {purchaseLines.length>1 && <button type="button" className="remove-line" onClick={()=>setPurchaseLines(purchaseLines.filter((_,i)=>i!==index))}>Remove item</button>}
                 </div>)}
-                <div className="info-note">Approval sequence: Shiftboss review → Magazine Master review → Mine Overseer approval. The approver's decision, name, date and comments are retained in the approval history.</div>
+                <div className="info-note">Approval sequence: Shiftboss signature → Mine Manager signature. Both decisions, approver names, dates and comments are retained in the approval history.</div>
                 <button className="primary-btn" disabled={busy}>{busy ? "Submitting…" : "Submit order for approval"}</button>
               </form>
             </section>
@@ -812,13 +811,12 @@ export default function Home() {
                   const deliveries=purchaseDeliveries.filter(d=>d.order_id===o.id);
                   const outstanding=(item:PurchaseOrderItem)=>Number(item.quantity)-purchaseDeliveryItems.filter(d=>d.order_item_id===item.id).reduce((sum,d)=>sum+Number(d.quantity_received),0);
                   const awaitingShift=o.status==="pending_shift_boss";
-                  const awaitingMagazine=o.status==="pending_magazine_master";
                   const awaitingMine=o.status==="pending_mine_overseer";
-                  const canReview=(awaitingShift&&canShiftBossReview)||(awaitingMagazine&&canMagazineMasterReview)||(awaitingMine&&canMineOverseerReview);
+                  const canReview=(awaitingShift&&canShiftBossReview)||(awaitingMine&&canMineOverseerReview);
                   return <article className="purchase-order-card" key={o.id}>
                     <div className="purchase-order-head">
                       <div><span className="order-subtext">PURCHASE REQUEST · PO-{o.order_number}</span><h4>{o.supplier_name}</h4><p>{o.work_area} · Requested by {o.requester_name}</p></div>
-                      <span className={"state "+(o.status==="approved"||o.status==="ordered"||o.status==="delivered"?"approved":o.status==="rejected"?"rejected":"pending_approval")}>{o.status.replaceAll("_"," ")}</span>
+                      <span className={"state "+(o.status==="approved"||o.status==="ordered"||o.status==="delivered"?"approved":o.status==="rejected"?"rejected":"pending_approval")}>{o.status==="pending_shift_boss"?"Awaiting Shiftboss signature":o.status==="pending_mine_overseer"?"Awaiting Mine Manager signature":o.status.replaceAll("_"," ")}</span>
                     </div>
                     <div className="purchase-order-meta">
                       <span><b>Order date</b>{new Date(o.order_date+"T00:00:00").toLocaleDateString("en-ZA")}</span>
@@ -832,13 +830,13 @@ export default function Home() {
                       return <tr key={i.id}><td><b>{i.item_description}</b>{i.notes?<div className="order-subtext">{i.notes}</div>:null}</td><td>{Number(i.quantity).toLocaleString("en-ZA")}</td><td>{received.toLocaleString("en-ZA")}</td><td>{outstanding(i).toLocaleString("en-ZA")}</td><td>{i.unit_of_measure}</td></tr>;
                     })}</tbody></table></div>
                     <div className="purchase-history"><b>Approval history</b>
-                      {approvals.length?approvals.map(a=><div className="purchase-history-row" key={a.id}><span>{a.approval_stage.replaceAll("_"," ")}</span><span>{a.decision}</span><small>{new Date(a.actioned_at).toLocaleString("en-ZA")} · {a.actioned_by_name}{a.comments?" · "+a.comments:""}</small></div>):<p className="order-subtext">No approval decisions recorded yet.</p>}
+                      {approvals.length?approvals.map(a=><div className="purchase-history-row" key={a.id}><span>{a.approval_stage==="shift_boss"?"Shiftboss":a.approval_stage==="mine_manager"?"Mine Manager":a.approval_stage.replaceAll("_"," ")}</span><span>{a.decision}</span><small>{new Date(a.actioned_at).toLocaleString("en-ZA")} · {a.actioned_by_name}{a.comments?" · "+a.comments:""}</small></div>):<p className="order-subtext">No approval decisions recorded yet.</p>}
                     </div>
                     {deliveries.length>0 && <div className="purchase-history"><b>Delivery records</b>{deliveries.map(d=><div className="purchase-history-row" key={d.id}><span>DN: {d.supplier_delivery_note}</span><span>{new Date(d.received_date+"T00:00:00").toLocaleDateString("en-ZA")}</span><small>{purchaseDeliveryItems.filter(x=>x.delivery_id===d.id).reduce((sum,x)=>sum+Number(x.quantity_received),0).toLocaleString("en-ZA")} total units recorded · Received by {d.received_by_name}{d.notes?" · "+d.notes:""}</small></div>)}</div>}
                     {canReview && <div className="purchase-actions">
                       <label>Approval comments<input value={purchaseComment} onChange={e=>setPurchaseComment(e.target.value)} placeholder="Optional review comments" /></label>
                       <div className="action-pair"><button className="mini-action" disabled={busy} onClick={()=>processPurchaseApproval(o,"approve")}>Approve</button><button className="mini-action danger" disabled={busy} onClick={()=>processPurchaseApproval(o,"reject")}>Reject</button></div>
-                      <small>Current stage: {awaitingShift?"Shiftboss":awaitingMagazine?"Magazine Master":"Mine Overseer"}</small>
+                      <small>Current stage: {awaitingShift?"Shiftboss":"Mine Manager"}</small>
                     </div>}
                     {canPlacePurchaseOrder&&o.status==="approved"&&<div className="purchase-actions">
                       {placingOrderId===o.id?<form className="inline-order-form" onSubmit={e=>placePurchaseOrder(e,o)}><label>Supplier purchase order number<input value={supplierOrderNumber} onChange={e=>setSupplierOrderNumber(e.target.value)} required /></label><button className="mini-action" disabled={busy}>Save supplier order</button><button type="button" className="remove-line" onClick={()=>setPlacingOrderId("")}>Cancel</button></form>:<button className="mini-action" onClick={()=>{setPlacingOrderId(o.id);setSupplierOrderNumber("");}}>Record supplier order placement</button>}
@@ -869,7 +867,7 @@ export default function Home() {
                     return <article className="purchase-order-card" key={o.id}>
                       <div className="purchase-order-head">
                         <div><span className="order-subtext">SUPPLIER ORDER · PO-{o.order_number}</span><h4>{o.supplier_name}</h4><p>{o.supplier_order_number ? "Supplier PO: "+o.supplier_order_number : "Supplier order reference not yet recorded"} · {o.work_area}</p></div>
-                        <span className={"state "+(o.status==="partially_delivered"?"pending_approval":"approved")}>{o.status.replaceAll("_"," ")}</span>
+                        <span className={"state "+(o.status==="partially_delivered"?"pending_approval":"approved")}>{o.status==="pending_shift_boss"?"Awaiting Shiftboss signature":o.status==="pending_mine_overseer"?"Awaiting Mine Manager signature":o.status.replaceAll("_"," ")}</span>
                       </div>
                       <div className="table-wrap"><table><thead><tr><th>ITEM</th><th>ORDERED</th><th>RECEIVED</th><th>LEFT TO RECEIVE</th><th>UNIT</th></tr></thead><tbody>{items.map(i=>{
                         const received=Number(i.quantity)-outstanding(i);
