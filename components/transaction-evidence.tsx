@@ -13,12 +13,19 @@ type Props = {
 type Attachment = {id:string;file_name:string;storage_path:string;mime_type:string;file_size:number;uploaded_by_name:string;created_at:string};
 
 const box:React.CSSProperties={marginTop:12,padding:12,border:"1px solid #d9e2ea",borderRadius:10,background:"#f8fafc"};
-const smallBtn:React.CSSProperties={border:0,borderRadius:7,padding:"8px 11px",background:"#173b57",color:"#fff",fontWeight:700,cursor:"pointer"};
 
-export default function TransactionEvidence({db,entityType,entityId,user,fullName,stage}:Props){
+export default function TransactionEvidence({db,entityType,entityId,user,fullName}:Props){
  const [files,setFiles]=useState<Attachment[]>([]);
  const [busy,setBusy]=useState(false);
  const [message,setMessage]=useState("");
+
+ async function load(){
+  const {data,error}=await db.from("ems_transaction_attachments").select("id,file_name,storage_path,mime_type,file_size,uploaded_by_name,created_at").eq("entity_type",entityType).eq("entity_id",entityId).order("created_at",{ascending:false});
+  if(error){setMessage(error.message);return;}
+  setFiles((data||[]) as Attachment[]);
+ }
+ useEffect(()=>{void load();},[db,entityType,entityId]);
+
  async function upload(file?:File){
   if(!file)return;
   setMessage("");
@@ -31,11 +38,14 @@ export default function TransactionEvidence({db,entityType,entityId,user,fullNam
   if(up.error){setMessage(up.error.message);setBusy(false);return;}
   const ins=await db.from("ems_transaction_attachments").insert({entity_type:entityType,entity_id:entityId,file_name:file.name,storage_path:path,mime_type:file.type,file_size:file.size,uploaded_by:user.id,uploaded_by_name:fullName});
   if(ins.error){setMessage("File uploaded but its evidence record could not be saved: "+ins.error.message);setBusy(false);return;}
-  setMessage("Supporting document attached.");await load();setBusy(false);
+  setMessage("Supporting document attached.");
+  await load();
+  setBusy(false);
  }
  async function openFile(path:string){
   const {data,error}=await db.storage.from("ems-documents").createSignedUrl(path,600);
-  if(error){setMessage(error.message);return;} if(data?.signedUrl)window.open(data.signedUrl,"_blank","noopener,noreferrer");
+  if(error){setMessage(error.message);return;}
+  if(data?.signedUrl)window.open(data.signedUrl,"_blank","noopener,noreferrer");
  }
  return <div style={box}>
   <b>Supporting documents</b>
