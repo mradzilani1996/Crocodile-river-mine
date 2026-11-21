@@ -417,3 +417,26 @@ td{font-size:12px;padding:15px 11px;line-height:1.45}
     max-width:36vw;
   }
 }
+
+
+/* Larger official Eastplats logo and clearer EMS title */
+.login-shell .brand{gap:18px}
+.login-shell .brand-logo{width:270px;height:88px;flex:0 0 270px;object-fit:contain;object-position:left center}
+.login-shell .brand strong{font-size:16px;line-height:1.4;letter-spacing:1.5px}
+.login-shell .brand span{font-size:12px;line-height:1.5;letter-spacing:1.4px}
+.app-shell .sidebar .side-brand{gap:14px}
+.app-shell .sidebar .side-brand .side-logo{flex:0 0 145px;width:145px;height:76px;max-width:48%;padding:6px 8px}
+.app-shell .sidebar .side-brand strong{font-size:12px;line-height:1.45;letter-spacing:.65px}
+.app-shell .sidebar .side-brand span{font-size:10.5px;line-height:1.5;letter-spacing:.7px}
+@media(max-width:1000px){
+ .app-shell .sidebar .side-brand .side-logo{flex-basis:130px;width:130px;height:68px;max-width:46%}
+}
+@media(max-width:650px){
+ .login-shell .brand{gap:10px}
+ .login-shell .brand-logo{width:150px;height:58px;flex-basis:150px}
+ .login-shell .brand strong{font-size:10px;letter-spacing:.8px}
+ .login-shell .brand span{font-size:8.5px;letter-spacing:.5px}
+ .app-shell .sidebar .side-brand .side-logo{flex-basis:112px;width:112px;height:60px;max-width:42vw}
+ .app-shell .sidebar .side-brand strong{font-size:10px}
+ .app-shell .sidebar .side-brand span{font-size:9px}
+}
