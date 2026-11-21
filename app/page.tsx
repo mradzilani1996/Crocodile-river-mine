@@ -18,7 +18,7 @@ type PurchaseDelivery = { id:string; delivery_number:number; order_id:string; su
 type PurchaseDeliveryItem = { id:string; delivery_id:string; order_item_id:string; quantity_received:number; notes:string|null };
 
 function EastplatsLogo({ className }: { className: string }) {
-  return <img className={className} src="/images/eastplats-reference-logo.svg" alt="Eastplats Barplats Mines logo" />;
+  return <img className={className} src="/images/eastplats-reference-logo.png" alt="Eastplats Barplats Mines logo" />;
 }
 
 export default function Home() {
