@@ -1,0 +1,84 @@
+"use client";
+import { useEffect, useMemo, useState } from "react";
+import { createClient, User } from "@supabase/supabase-js";
+import EmsPageHeader from "@/components/ems-page-header";
+
+type Row = Record<string, any>;
+const panel: React.CSSProperties = {background:"#fff",border:"1px solid #dce3ea",borderRadius:14,padding:20,marginBottom:16,boxShadow:"0 2px 8px rgba(16,24,40,.04)"};
+const btn: React.CSSProperties = {border:0,borderRadius:9,padding:"11px 16px",minHeight:44,background:"#173b57",color:"#fff",fontWeight:750,cursor:"pointer"};
+const field: React.CSSProperties = {width:"100%",padding:11,border:"1px solid #cbd5df",borderRadius:8,fontSize:15,minHeight:42};
+const fmt=(v:any)=>v?new Date(v).toLocaleString("en-ZA"):"—";
+
+export default function ApprovalsPage(){
+ const db=useMemo(()=>{const u=process.env.NEXT_PUBLIC_SUPABASE_URL,k=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;return u&&k?createClient(u,k):null;},[]);
+ const [user,setUser]=useState<User|null>(null),[profile,setProfile]=useState<Row|null>(null);
+ const [movements,setMovements]=useState<Row[]>([]),[daily,setDaily]=useState<Row[]>([]),[dailyItems,setDailyItems]=useState<Row[]>([]);
+ const [products,setProducts]=useState<Row[]>([]),[purchase,setPurchase]=useState<Row[]>([]),[purchaseItems,setPurchaseItems]=useState<Row[]>([]),[stocktakes,setStocktakes]=useState<Row[]>([]);
+ const [notes,setNotes]=useState<Record<string,string>>({}),[quantities,setQuantities]=useState<Record<string,string>>({});
+ const [busy,setBusy]=useState(false),[loading,setLoading]=useState(true),[error,setError]=useState(""),[notice,setNotice]=useState("");
+ const role=profile?.role||"", isAdmin=role==="admin", isShift=role==="authorising_officer", isManager=role==="management";
+ async function load(){
+  if(!db)return;setLoading(true);setError("");
+  const results=await Promise.all([
+   db.from("ems_stock_transactions").select("id,transaction_number,transaction_type,status,product_id,quantity,unit_quantity,package_quantity,transaction_date,reference_number,created_by,purpose,notes,control_book_section,approval_comments,ems_explosive_products(product_name,unit_of_measure)").in("status",["pending_approval","shiftboss_approved"]).order("created_at",{ascending:true}),
+   db.from("ems_daily_orders").select("*").eq("status","submitted").order("created_at",{ascending:true}),
+   db.from("ems_daily_order_items").select("*").order("created_at"),
+   db.from("ems_explosive_products").select("*").eq("approval_status","pending_approval").order("created_at",{ascending:true}),
+   db.from("ems_purchase_orders").select("*").in("status",["pending_shift_boss","pending_mine_overseer"]).order("created_at",{ascending:true}),
+   db.from("ems_purchase_order_items").select("*").order("created_at"),
+   db.from("ems_stocktakes").select("*,ems_explosive_products(product_code,product_name,unit_of_measure)").eq("status","pending_verification").order("count_date",{ascending:true})
+  ]);
+  const labels=["Stock movements","Daily requests","Product approvals","Supplier orders","Supplier order items","Stocktake approvals"];
+  for(let i=0;i<results.length;i++){if(results[i].error){setError(labels[i] ? labels[i]+": "+results[i].error.message : results[i].error.message);}}
+  setMovements(results[0].data||[]);setDaily(results[1].data||[]);setDailyItems(results[2].data||[]);setProducts(results[3].data||[]);setPurchase(results[4].data||[]);setPurchaseItems(results[5].data||[]);setStocktakes(results[6].data||[]);
+  setLoading(false);
+ }
+ useEffect(()=>{if(!db)return;db.auth.getSession().then(async({data})=>{const u=data.session?.user||null;setUser(u);if(u){const {data:p,error:e}=await db.from("ems_profiles").select("full_name,role,is_active").eq("user_id",u.id).maybeSingle();if(e)setError(e.message);else if(p?.is_active){setProfile(p);await load();}}else setLoading(false);});},[db]);
+ const counts={
+  stock:movements.filter(r=>(isShift||isAdmin)&&r.status==="pending_approval" || (isManager||isAdmin)&&r.status==="shiftboss_approved").length,
+  daily:(isShift||isAdmin)?daily.length:0,
+  products:(isShift||isManager||isAdmin)?products.length:0,
+  supplier:purchase.filter(r=>(isShift||isAdmin)&&r.status==="pending_shift_boss"||(isManager||isAdmin)&&r.status==="pending_mine_overseer").length,
+  stocktakes:(isManager||isAdmin)?stocktakes.length:0
+ };
+ const total=Object.values(counts).reduce((a,b)=>a+b,0);
+ async function finish(promise:Promise<any>,success:string){setBusy(true);setError("");setNotice("");const {error:e}=await promise;if(e)setError(e.message);else{setNotice(success);setNotes({});await load();}setBusy(false);}
+ async function decideMovement(r:Row,decision:"shiftboss_approved"|"posted"|"rejected"){
+  if(!db||!user)return;
+  const next=decision==="shiftboss_approved"?"pending_approval":r.status;
+  await finish(db.from("ems_stock_transactions").update({status:decision,approval_comments:notes[r.id]||null}).eq("id",r.id).eq("status",next),
+   decision==="shiftboss_approved"?"Shiftboss approval recorded. Sent to Management.":decision==="posted"?"Manager approved the movement and the stock balance is updated.":"Movement rejected; stock was not changed.");
+ }
+ async function decideDaily(r:Row,decision:"approve"|"reject"){
+  if(!db)return;const items=dailyItems.filter(i=>i.order_id===r.id);
+  const pitems=decision==="approve"?items.map(i=>({id:i.id,quantity_approved:Number(quantities[i.id]??i.quantity_requested)})):[];
+  if(decision==="approve"&&pitems.some((x,i)=>!Number.isFinite(x.quantity_approved)||x.quantity_approved<0||x.quantity_approved>Number(items[i].quantity_requested))){setError("Approved quantities must be zero or more and cannot exceed the quantities requested.");return;}
+  await finish(db.rpc("ems_process_daily_order",{p_order_id:r.id,p_decision:decision,p_items:pitems,p_comments:notes[r.id]||null}),decision==="approve"?"Daily explosive request approved.":"Daily request rejected.");
+ }
+ async function decideProduct(r:Row,decision:"approved"|"rejected"){
+  if(!db||!user)return;if(r.submitted_by===user.id&&!isAdmin){setError("You cannot approve a product you submitted yourself.");return;}
+  await finish(db.from("ems_explosive_products").update({approval_status:decision,approved_by:user.id,approved_at:new Date().toISOString(),approval_notes:notes[r.id]||r.approval_notes||null,is_active:decision==="approved"}).eq("id",r.id).eq("approval_status","pending_approval"),decision==="approved"?"Product approved and activated.":"Product rejected.");
+ }
+ async function decidePurchase(r:Row,decision:"approve"|"reject"){
+  if(!db)return;await finish(db.rpc("ems_process_purchase_order_approval",{p_order_id:r.id,p_decision:decision,p_comments:notes[r.id]||null}),decision==="approve"?"Supplier order approval recorded.":"Supplier order rejected.");
+ }
+ async function decideStocktake(r:Row,decision:"approve"|"reject"){
+  if(!db)return;await finish(db.rpc("ems_review_stocktake",{p_stocktake_id:r.id,p_decision:decision,p_notes:notes[r.id]||null}),decision==="approve"?"Stock count approved. Any authorised variance adjustment has been posted.":"Stock count rejected.");
+ }
+ const canReviewDaily=isShift||isAdmin, canReviewProducts=isShift||isManager||isAdmin;
+ if(!db)return <main style={{padding:24}}>EMS database settings are not configured.</main>;
+ if(!user||!profile)return <main style={{padding:24,maxWidth:700,margin:"auto"}}><h1>Crocodile River Mine EMS</h1><p>Sign in through the main dashboard to access approvals.</p><a href="/">Return to dashboard</a></main>;
+ return <main className="ems-page" style={{minHeight:"100vh",background:"#f4f6f8",padding:"18px 14px",color:"#17212b",fontSize:16,lineHeight:1.55}}><EmsPageHeader active="approvals"/><div style={{maxWidth:1250,margin:"auto"}}>
+  <header style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap",marginBottom:18}}><div><a href="/" style={{fontWeight:700,color:"#315a75",textDecoration:"none"}}>← EMS Dashboard</a><h1 style={{fontSize:30,margin:"8px 0 3px"}}>Approval Centre</h1><p style={{margin:0,color:"#667085"}}>All items waiting for your Shiftboss or Management decision.</p></div><div style={{display:"flex",gap:10,alignItems:"center"}}><span style={{fontWeight:800,fontSize:26}}>{total}</span><span>awaiting your action</span><button style={btn} onClick={load}>Refresh</button></div></header>
+  {error&&<p role="alert" style={{background:"#fff0f0",color:"#9b2424",padding:12,borderRadius:8}}>{error}</p>}{notice&&<p style={{background:"#eaf6ef",color:"#17633a",padding:12,borderRadius:8}}>{notice}</p>}
+  <section style={{...panel,display:"flex",gap:10,flexWrap:"wrap"}}><b>Signed in as: {profile.full_name}</b><span>·</span><b>{isShift?"Shiftboss":isManager?"Management":role.replaceAll("_"," ")}</b><span style={{color:"#667085"}}>Only approvals assigned to your role are shown below.</span></section>
+  {loading&&<p>Loading approvals…</p>}
+  {((isShift||isAdmin)&&movements.some(r=>r.status==="pending_approval")||(isManager||isAdmin)&&movements.some(r=>r.status==="shiftboss_approved"))&&<section style={panel}><h2>Stock movements</h2><p>Shiftboss reviews first. Management gives final approval, which updates the stock balance.</p>{movements.filter(r=>isShift&&r.status==="pending_approval"||isManager&&r.status==="shiftboss_approved"||isAdmin&&(r.status==="pending_approval"||r.status==="shiftboss_approved")).map(r=><article key={r.id} style={{borderTop:"1px solid #e6eaf0",padding:"14px 0"}}><b>EMS-{r.transaction_number} · {r.transaction_type} · {r.ems_explosive_products?.product_name||"Product"}</b><p>{fmt(r.transaction_date)} · {r.unit_quantity??r.quantity} {r.ems_explosive_products?.unit_of_measure||"units"} · {r.control_book_section||"Register"}</p><small>Submitted by user {r.created_by} · {r.reference_number||"No reference"} · {r.purpose||""}</small><textarea style={{...field,marginTop:10}} placeholder="Comments (optional)" value={notes[r.id]||""} onChange={e=>setNotes({...notes,[r.id]:e.target.value})}/><div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:9}}>{r.status==="pending_approval"&&isShift&&<button style={btn} disabled={busy} onClick={()=>decideMovement(r,"shiftboss_approved")}>Shiftboss approve</button>}{r.status==="pending_approval"&&isAdmin&&<button style={btn} disabled={busy} onClick={()=>decideMovement(r,"posted")}>Admin final approve & post</button>}{r.status==="shiftboss_approved"&&(isManager||isAdmin)&&<button style={btn} disabled={busy} onClick={()=>decideMovement(r,"posted")}>Manager final approve & update balance</button>}<button style={{...btn,background:"#8a3a28"}} disabled={busy} onClick={()=>decideMovement(r,"rejected")}>Reject</button></div></article>)}</section>}
+  {canReviewDaily&&daily.length>0&&<section style={panel}><h2>Daily explosive requests</h2><p>Shiftboss checks the miner, work area and requested quantities before authorising issue.</p>{daily.map(r=><article key={r.id} style={{borderTop:"1px solid #e6eaf0",padding:"14px 0"}}><b>ORDER-{r.order_number} · {r.order_date} · {r.shift} shift</b><p>{r.work_area} · {r.blast_site||"No blast site"} · {r.miner_name} ({r.miner_company_number})</p><p>{r.purpose||""} · Requested by {r.requester_name||r.requested_by}</p>{dailyItems.filter(i=>i.order_id===r.id).map(i=><label key={i.id} style={{display:"block",margin:"8px 0"}}><span>{i.product_name||i.product_id} · Requested {i.quantity_requested}</span><input type="number" min="0" max={i.quantity_requested} step="0.001" style={field} value={quantities[i.id]??String(i.quantity_requested)} onChange={e=>setQuantities({...quantities,[i.id]:e.target.value})}/></label>)}<textarea style={{...field,marginTop:8}} placeholder="Reason required if rejecting; optional approval notes" value={notes[r.id]||""} onChange={e=>setNotes({...notes,[r.id]:e.target.value})}/><div style={{display:"flex",gap:8,marginTop:9}}><button style={btn} disabled={busy} onClick={()=>decideDaily(r,"approve")}>Approve quantities</button><button style={{...btn,background:"#8a3a28"}} disabled={busy} onClick={()=>decideDaily(r,"reject")}>Reject</button></div></article>)}</section>}
+  {canReviewProducts&&products.length>0&&<section style={panel}><h2>New product approvals</h2><p>Approved products become available for authorised stock movements.</p>{products.map(r=><article key={r.id} style={{borderTop:"1px solid #e6eaf0",padding:"14px 0"}}><b>{r.product_code} · {r.product_name}</b><p>{r.control_book_section||"Register"} · {r.unit_of_measure} · Minimum stock {r.minimum_stock}</p><small>Submitted by user {r.submitted_by||"Unknown"} · Opening quantity {r.opening_quantity||0}</small><textarea style={{...field,marginTop:10}} placeholder="Approval or rejection notes" value={notes[r.id]||""} onChange={e=>setNotes({...notes,[r.id]:e.target.value})}/><div style={{display:"flex",gap:8,marginTop:9}}><button style={btn} disabled={busy} onClick={()=>decideProduct(r,"approved")}>Approve product</button><button style={{...btn,background:"#8a3a28"}} disabled={busy} onClick={()=>decideProduct(r,"rejected")}>Reject</button></div></article>)}</section>}
+  {purchase.filter(r=>isShift&&r.status==="pending_shift_boss"||isManager&&r.status==="pending_mine_overseer"||isAdmin&&(r.status==="pending_shift_boss"||r.status==="pending_mine_overseer")).length>0&&<section style={panel}><h2>Supplier purchase orders</h2><p>Shiftboss review is followed by final Mine Manager approval.</p>{purchase.filter(r=>isShift&&r.status==="pending_shift_boss"||isManager&&r.status==="pending_mine_overseer"||isAdmin&&(r.status==="pending_shift_boss"||r.status==="pending_mine_overseer")).map(r=><article key={r.id} style={{borderTop:"1px solid #e6eaf0",padding:"14px 0"}}><b>PO-{r.order_number} · {r.supplier_name}</b><p>{r.work_area} · {r.purpose} · Requested by {r.requester_name}</p><p>Order date {r.order_date} · Required delivery {r.required_delivery_date||"Not specified"}</p>{purchaseItems.filter(i=>i.order_id===r.id).map(i=><div key={i.id} style={{padding:"5px 0"}}>{i.item_description} · {i.quantity} {i.unit_of_measure}</div>)}<textarea style={{...field,marginTop:10}} placeholder="Approval or rejection comments" value={notes[r.id]||""} onChange={e=>setNotes({...notes,[r.id]:e.target.value})}/><div style={{display:"flex",gap:8,marginTop:9}}><button style={btn} disabled={busy} onClick={()=>decidePurchase(r,"approve")}>{r.status==="pending_shift_boss"?"Shiftboss approve":"Manager final approve"}</button><button style={{...btn,background:"#8a3a28"}} disabled={busy} onClick={()=>decidePurchase(r,"reject")}>Reject</button></div></article>)}</section>}
+  {(isManager||isAdmin)&&stocktakes.length>0&&<section style={panel}><h2>Magazine stock count approvals</h2><p>Check the physical count. Approving a difference posts the authorised adjustment to the stock ledger.</p>{stocktakes.map(r=><article key={r.id} style={{borderTop:"1px solid #e6eaf0",padding:"14px 0"}}><b>COUNT-{r.stocktake_number} · {r.ems_explosive_products?.product_name||"Product"} · {r.control_book_section||"Register"}</b><p>Count date {r.count_date} · System {r.system_balance} · Physical {r.physical_balance} · Difference {r.variance}</p><small>Counted by {r.counted_by_name||r.counted_by} · {r.discrepancy_notes||"No discrepancy notes"}</small><textarea style={{...field,marginTop:10}} placeholder={Number(r.variance)!==0?"Management explanation required":"Management review notes"} value={notes[r.id]||""} onChange={e=>setNotes({...notes,[r.id]:e.target.value})}/><div style={{display:"flex",gap:8,marginTop:9}}><button style={btn} disabled={busy} onClick={()=>decideStocktake(r,"approve")}>Management approve count</button><button style={{...btn,background:"#8a3a28"}} disabled={busy} onClick={()=>decideStocktake(r,"reject")}>Reject</button></div></article>)}</section>}
+  {!loading&&total===0&&<section style={{...panel,textAlign:"center",padding:36}}><h2>No approvals waiting</h2><p style={{color:"#667085"}}>There are no items currently assigned to your role. New requests will appear here automatically after refresh.</p></section>}
+  <footer style={{color:"#667085",fontSize:12,padding:12}}>CROCODILE RIVER MINE · EXPLOSIVES MANAGEMENT SYSTEM · AUTHORISED APPROVALS ONLY</footer>
+ </div></main>;
+}
