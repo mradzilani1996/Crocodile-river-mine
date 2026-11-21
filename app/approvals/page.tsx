@@ -47,7 +47,8 @@ export default function ApprovalsPage(){
   inspections:(isManager||isAdmin)?inspections.length:0
  };
  const total=Object.values(counts).reduce((a,b)=>a+b,0);
- async function finish(promise:PromiseLike<any>,success:string):Promise<boolean>{setBusy(true);setError("");setNotice("");const {error:e}=await promise;if(e)setError(e.message);else{setNotice(success);setNotes({});await load();}setBusy(false);return !e;}\n async function recordApproval(entityType:string,id:string,stage:string,decision:string,comments:string){const {error:e}=await db!.rpc("ems_record_approval_acknowledgement",{p_entity_type:entityType,p_entity_id:id,p_approval_stage:stage,p_decision:decision,p_comments:comments||null});if(e)setError("Action completed, but approval acknowledgement failed: "+e.message);}
+ async function finish(promise:PromiseLike<any>,success:string):Promise<boolean>{setBusy(true);setError("");setNotice("");const {error:e}=await promise;if(e)setError(e.message);else{setNotice(success);setNotes({});await load();}setBusy(false);return !e;}
+ async function recordApproval(entityType:string,id:string,stage:string,decision:string,comments:string){const {error:e}=await db!.rpc("ems_record_approval_acknowledgement",{p_entity_type:entityType,p_entity_id:id,p_approval_stage:stage,p_decision:decision,p_comments:comments||null});if(e)setError("Action completed, but approval acknowledgement failed: "+e.message);}
  async function decideMovement(r:Row,decision:"shiftboss_approved"|"posted"|"rejected"){
   if(!db||!user)return;
   const next=decision==="shiftboss_approved"?"pending_approval":r.status;
