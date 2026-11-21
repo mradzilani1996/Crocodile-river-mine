@@ -509,6 +509,7 @@ export default function Home() {
   const activePeople = profiles.filter(p => p.is_active);
   const activeProducts = products.filter(p => p.is_active && p.approval_status === "approved");
   const isAppointedMagazineMaster = profile?.role === "magazine_master" && magazine?.responsible_user_id === user?.id;
+  useEffect(() => { if (isAppointedMagazineMaster) setSection("magazine-home"); }, [isAppointedMagazineMaster]);
   const canManageProducts = profile?.role === "admin" || isAppointedMagazineMaster;
   const canApproveProducts = profile?.role === "admin" || profile?.role === "authorising_officer" || profile?.role === "management";
   const pendingStock = pendingMovementCount;
@@ -618,6 +619,7 @@ export default function Home() {
       <aside className="sidebar">
         <div className="side-brand"><EastplatsLogo className="side-logo" /><div><strong>CROCODILE RIVER MINE</strong><span>EXPLOSIVES MANAGEMENT</span></div></div>
         <div className="nav-caption">MAIN MENU</div>
+        {isAppointedMagazineMaster && <button className={section === "magazine-home" ? "nav-item active" : "nav-item"} onClick={() => setSection("magazine-home")}>⌂ <span>Magazine home</span></button>}
         <button className={section === "overview" ? "nav-item active" : "nav-item"} onClick={() => setSection("overview")}>▤ <span>Home</span></button>
         <a className="nav-item" href="/approvals">✓ <span>Approval Centre</span></a>
         <button className={section === "products" ? "nav-item active" : "nav-item"} onClick={() => setSection("products")}>▤ <span>Product register</span></button>
@@ -640,11 +642,35 @@ export default function Home() {
         </div>
       </aside>
       <section className="main-area">
-        <header className="app-top"><div><span className="crumb">CROCODILE RIVER MINE / EMS</span><h1>{section === "overview" ? "Overview" : section === "products" ? "Explosives inventory" : section === "people" ? "User access" : section === "magazine" ? "Magazine management" : section === "daily-orders" ? "Daily explosive order sheet" : section === "control-book" ? "Explosives control book" : section === "ordering" ? "Explosives & accessories ordering" : section === "deliveries" ? "Supplier delivery receiving" : "Stock records"}</h1></div><div className="top-right"><span className="status-dot"></span> System online <button onClick={loadDashboard} className="refresh-btn">↻ Refresh</button></div></header>
+        <header className="app-top"><div><span className="crumb">CROCODILE RIVER MINE / EMS</span><h1>{section === "magazine-home" ? "Magazine workspace" : section === "overview" ? "Overview" : section === "products" ? "Explosives inventory" : section === "people" ? "User access" : section === "magazine" ? "Magazine management" : section === "daily-orders" ? "Daily explosive order sheet" : section === "control-book" ? "Explosives control book" : section === "ordering" ? "Explosives & accessories ordering" : section === "deliveries" ? "Supplier delivery receiving" : "Stock records"}</h1></div><div className="top-right"><span className="status-dot"></span> System online <button onClick={loadDashboard} className="refresh-btn">↻ Refresh</button></div></header>
         <div className="content">
           {notice && <div className="notice success-notice">{notice}</div>}
           {error && <div className="notice error-notice">{error}</div>}
           {dataLoading && <div className="loading-line">Updating EMS records…</div>}
+          {section === "magazine-home" && isAppointedMagazineMaster && <section className="magazine-home">
+            <div className="magazine-welcome">
+              <div><span className="magazine-eyebrow">DAILY MAGAZINE WORKSPACE</span><h2>Good day, {profile?.full_name?.split(" ")[0] || "Magazine Master"}</h2><p>Your main work is organised here. Choose a task to continue; all stock movements remain subject to the existing approval and posting controls.</p></div>
+              <span className="magazine-role-chip">Appointed Magazine Master</span>
+            </div>
+            <div className="magazine-summary-grid">
+              <article><span>Pending stock approvals</span><strong>{pendingStock}</strong><small>Movements awaiting authorisation</small></article>
+              <article><span>Daily requests</span><strong>{pendingDaily}</strong><small>Requests awaiting review</small></article>
+              <article><span>Low stock items</span><strong>{lowStockProducts.length}</strong><small>At or below minimum stock</small></article>
+              <article><span>Approved products</span><strong>{activeProducts.length}</strong><small>Available in the product register</small></article>
+            </div>
+            <div className="magazine-section-heading"><div><h3>What would you like to do?</h3><p>Frequently used magazine tasks are one click away.</p></div></div>
+            <div className="magazine-action-grid">
+              <a className="magazine-action-card primary" href="/stock-control"><span className="magazine-action-icon">⇄</span><span><b>Record stock movement</b><small>Open the controlled receipt, issue, return and adjustment workflow</small></span><i>Open →</i></a>
+              <button type="button" className="magazine-action-card" onClick={() => setSection("daily-orders")}><span className="magazine-action-icon">▧</span><span><b>Daily explosive requests</b><small>Review requests and prepare authorised issues</small></span><i>Open →</i></button>
+              <button type="button" className="magazine-action-card" onClick={() => setSection("control-book")}><span className="magazine-action-icon">▤</span><span><b>Stock book & balances</b><small>Check Boxes, Bags and Tamping registers</small></span><i>Open →</i></button>
+              <button type="button" className="magazine-action-card" onClick={() => setSection("deliveries")}><span className="magazine-action-icon">⇩</span><span><b>Receive supplier delivery</b><small>Record delivery notes and quantities received</small></span><i>Open →</i></button>
+              <button type="button" className="magazine-action-card" onClick={() => setSection("products")}><span className="magazine-action-icon">▣</span><span><b>Explosives product register</b><small>View approved products and submit permitted changes</small></span><i>Open →</i></button>
+              <button type="button" className="magazine-action-card" onClick={() => setSection("ordering")}><span className="magazine-action-icon">▤</span><span><b>Supplier orders</b><small>Prepare and track supplier orders</small></span><i>Open →</i></button>
+              <a className="magazine-action-card" href="/approvals"><span className="magazine-action-icon">✓</span><span><b>Approval centre</b><small>See decisions waiting for authorised reviewers</small></span><i>Open →</i></a>
+              <a className="magazine-action-card" href="/reports"><span className="magazine-action-icon">▥</span><span><b>Reports</b><small>Open operational and stock reports</small></span><i>Open →</i></a>
+            </div>
+            <div className="magazine-guidance"><b>Important stock-control reminder</b><p>Submitting a transaction does not change the available balance. The existing authorisation and Magazine Master posting process must be completed before a movement is reflected in posted stock balances. Keep supporting documents and acknowledgements attached to the relevant record.</p></div>
+          </section>}
           {section === "overview" && <>
             <div className="welcome-row"><div><h2>Welcome back, {profile?.full_name?.split(" ")[0] || "Admin"}</h2><p>Here is the current overview of your explosives management records.</p></div><span className="role-pill">{roleName}</span></div>
             <div className="stats-grid">
