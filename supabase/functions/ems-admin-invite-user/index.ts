@@ -68,16 +68,16 @@ Deno.serve(async (req: Request) => {
   if (password.length < 12 || password.length > 128) return respond({ error: "Set an initial password between 12 and 128 characters." }, 400);
   if (!allowedRoles.includes(role)) return respond({ error: "Choose an approved operational EMS role. Administrator access cannot be granted through invitations." }, 400);
 
-  const redirectTo = Deno.env.get("EMS_APP_URL") || "https://crocodileems.vercel.app/";
-  const { data: inviteData, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
-    data: { full_name: fullName }, redirectTo,
+  const { data: createData, error: createError } = await adminClient.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: { full_name: fullName },
   });
-  if (inviteError || !inviteData.user) return respond({ error: inviteError?.message || "Supabase did not return the invited account." }, 400);
-  const { error: passwordError } = await adminClient.auth.admin.updateUserById(inviteData.user.id, { password });
-  if (passwordError) { await adminClient.auth.admin.deleteUser(inviteData.user.id); return respond({ error: passwordError.message }, 400); }
+  if (createError || !createData.user) return respond({ error: createError?.message || "Supabase did not return the new staff account." }, 400);
 
   const { error: createProfileError } = await adminClient.from("ems_profiles").insert({
-    user_id: inviteData.user.id,
+    user_id: createData.user.id,
     full_name: fullName,
     email,
     role,
@@ -86,9 +86,9 @@ Deno.serve(async (req: Request) => {
   });
 
   if (createProfileError) {
-    await adminClient.auth.admin.deleteUser(inviteData.user.id);
+    await adminClient.auth.admin.deleteUser(createData.user.id);
     return respond({ error: "The invitation could not be linked to an EMS profile: " + createProfileError.message }, 500);
   }
 
-  return respond({ ok: true, invited_email: email, assigned_role: role });
+  return respond({ ok: true, created_email: email, assigned_role: role });
 });
