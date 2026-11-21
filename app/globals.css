@@ -308,7 +308,7 @@ td{font-size:12px;padding:15px 11px;line-height:1.45}
 .ems-page{min-height:100vh;background:#f4f6f8;color:#17212b}
 .ems-pagebar{max-width:1500px;margin:0 auto 24px;padding:12px 16px;background:#fff;border:1px solid #e1e7e1;border-radius:12px;display:flex;align-items:center;justify-content:space-between;gap:18px;box-shadow:0 3px 14px rgba(20,40,25,.05)}
 .ems-pagebrand{display:flex;align-items:center;gap:10px;min-width:210px;color:#173b25;text-decoration:none}
-.ems-pagebrand img{width:42px;height:42px;object-fit:contain}
+.ems-pagebrand img{width:136px;height:48px;object-fit:contain;flex:0 0 auto}
 .ems-pagebrand span{display:grid;gap:4px}
 .ems-pagebrand strong{font-size:12px;letter-spacing:.2px}
 .ems-pagebrand small{font-size:10px;color:#657366}
@@ -364,7 +364,7 @@ td{font-size:12px;padding:15px 11px;line-height:1.45}
  .ems-page{padding:14px!important}
  .ems-pagebar{padding:10px;border-radius:9px;gap:10px}
  .ems-pagebrand{min-width:0;flex:1}
- .ems-pagebrand img{width:34px;height:34px}
+ .ems-pagebrand img{width:104px;height:38px}
  .ems-pagebrand strong{font-size:11px}
  .ems-pagebrand small{font-size:9px}
  .ems-page-home{padding:9px 10px;font-size:11px}
