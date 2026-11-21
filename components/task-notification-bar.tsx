@@ -5,18 +5,22 @@ import { createClient, User } from "@supabase/supabase-js";
 
 type Task = { key:string; label:string; count:number; href:string };
 type Profile = { role:string; is_active:boolean };
+type UserNotification = { id:string; title:string; message:string; href:string; created_at:string };
 
 export default function TaskNotificationBar(){
   const db=useMemo(()=>{const url=process.env.NEXT_PUBLIC_SUPABASE_URL,key=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;return url&&key?createClient(url,key):null;},[]);
   const [user,setUser]=useState<User|null>(null);
   const [tasks,setTasks]=useState<Task[]>([]);
+  const [notifications,setNotifications]=useState<UserNotification[]>([]);
   const [expanded,setExpanded]=useState(false);
   const [lastChecked,setLastChecked]=useState<Date|null>(null);
 
   const refresh=useCallback(async()=>{
     if(!db||!user)return;
     const {data:profile}=await db.from("ems_profiles").select("role,is_active").eq("user_id",user.id).maybeSingle() as {data:Profile|null};
-    if(!profile?.is_active){setTasks([]);return;}
+    if(!profile?.is_active){setTasks([]);setNotifications([]);return;}
+    const {data:noticeRows}=await db.from("ems_user_notifications").select("id,title,message,href,created_at").eq("recipient_user_id",user.id).is("read_at",null).order("created_at",{ascending:false}).limit(10);
+    setNotifications((noticeRows||[]) as UserNotification[]);
     const role=profile.role||"";
     const admin=role==="admin", shift=role==="authorising_officer", manager=role==="management";
     const jobs:PromiseLike<any>[]=[];
@@ -59,13 +63,13 @@ export default function TaskNotificationBar(){
     return()=>{window.clearInterval(timer);db.removeChannel(channel);};
   },[db,user,refresh]);
 
-  const total=tasks.reduce((sum,t)=>sum+t.count,0);
-  if(!user||!tasks.length)return null;
+  const total=tasks.reduce((sum,t)=>sum+t.count,0)+notifications.length;
+  if(!user||(!tasks.length&&!notifications.length))return null;
   return <aside role="status" aria-live="polite" style={{position:"sticky",top:0,zIndex:40,background:"#fff8e7",borderBottom:"1px solid #f0d48a",color:"#382b12",padding:"10px 16px",boxShadow:"0 2px 8px rgba(0,0,0,.06)"}}>
     <div style={{maxWidth:1400,margin:"0 auto",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
       <button type="button" onClick={()=>setExpanded(v=>!v)} aria-expanded={expanded} style={{display:"flex",alignItems:"center",gap:10,border:0,background:"transparent",color:"inherit",fontSize:15,fontWeight:800,cursor:"pointer",padding:4}}>
         <span aria-hidden="true" style={{fontSize:21}}>🔔</span>
-        <span>You have {total} task{total===1?"":"s"} to do</span>
+        <span>You have {total} notification{total===1?"":"s"} / task{total===1?"":"s"}</span>
         <span style={{background:"#b42318",color:"#fff",borderRadius:20,minWidth:25,textAlign:"center",padding:"2px 8px"}}>{total}</span>
         <span style={{fontSize:12}}>{expanded?"▲":"▼"}</span>
       </button>
@@ -75,6 +79,7 @@ export default function TaskNotificationBar(){
       </div>
     </div>
     {expanded&&<div style={{maxWidth:1400,margin:"9px auto 2px",display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(230px,1fr))",gap:8}}>
+      {notifications.map(n=><a key={n.id} href={n.href} onClick={()=>{void db?.from("ems_user_notifications").update({read_at:new Date().toISOString()}).eq("id",n.id).eq("recipient_user_id",user.id);}} style={{display:"block",background:"#fff",border:"1px solid #d7b56b",borderRadius:8,padding:"10px 12px",color:"#253342",textDecoration:"none",gridColumn:"1 / -1"}}><strong>{n.title}</strong><div style={{marginTop:4}}>{n.message}</div><small style={{color:"#796b4f"}}>Open Approval Centre · {new Date(n.created_at).toLocaleString("en-ZA")}</small></a>)}
       {tasks.map(t=><a key={t.key} href={t.href} style={{display:"flex",justifyContent:"space-between",gap:12,alignItems:"center",background:"#fff",border:"1px solid #ead9b4",borderRadius:8,padding:"10px 12px",color:"#253342",textDecoration:"none"}}>
         <span>{t.label}</span><b style={{color:"#a12a20",fontSize:18}}>{t.count}</b>
       </a>)}
