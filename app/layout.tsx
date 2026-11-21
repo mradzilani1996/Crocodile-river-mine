@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./magazine-ux.css";
 import TaskNotificationBar from "@/components/task-notification-bar";
 
 export const metadata: Metadata = {
