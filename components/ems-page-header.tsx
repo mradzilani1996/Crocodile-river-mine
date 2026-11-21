@@ -13,7 +13,7 @@ export default function EmsPageHeader({ active = "" }: Props) {
   return (
     <header className="ems-pagebar no-print">
       <a className="ems-pagebrand" href="/" aria-label="Crocodile River Mine EMS home">
-        <img src="/crm-logo.svg" alt="" />
+        <img src="/images/eastplats-reference-logo.svg" alt="Eastplats Barplats Mines logo" />
         <span><strong>Crocodile River Mine</strong><small>Explosives Management System</small></span>
       </a>
       <nav className="ems-page-links" aria-label="Main navigation">
