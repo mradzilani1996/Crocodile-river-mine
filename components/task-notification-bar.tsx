@@ -20,7 +20,7 @@ export default function TaskNotificationBar(){
     const role=profile.role||"";
     const admin=role==="admin", shift=role==="authorising_officer", manager=role==="management";
     const jobs:Promise<any>[]=[];
-    const add=(key:string,label:string,href:string,p:Promise<any>)=>jobs.push(p.then(r=>({key,label,href,count:r.count??(r.data?.length||0),error:r.error})));
+    const add=(key:string,label:string,href:string,p:PromiseLike<any>)=>jobs.push(p.then(r=>({key,label,href,count:r.count??(r.data?.length||0),error:r.error})));
     if(admin||shift)add("stock-shift","Stock movements awaiting Shiftboss approval","/approvals",db.from("ems_stock_transactions").select("id",{count:"exact",head:true}).eq("status","pending_approval"));
     if(admin||manager)add("stock-manager","Stock movements awaiting Management approval","/approvals",db.from("ems_stock_transactions").select("id",{count:"exact",head:true}).eq("status","shiftboss_approved"));
     if(admin||shift)add("daily","Daily explosive requests","/approvals",db.from("ems_daily_orders").select("id",{count:"exact",head:true}).eq("status","submitted"));
