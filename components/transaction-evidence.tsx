@@ -19,14 +19,6 @@ export default function TransactionEvidence({db,entityType,entityId,user,fullNam
  const [files,setFiles]=useState<Attachment[]>([]);
  const [busy,setBusy]=useState(false);
  const [message,setMessage]=useState("");
- const [comments,setComments]=useState("");
- const [decision,setDecision]=useState("approved");
- const [confirmed,setConfirmed]=useState(false);
- async function load(){
-  const {data,error}=await db.from("ems_transaction_attachments").select("id,file_name,storage_path,mime_type,file_size,uploaded_by_name,created_at").eq("entity_type",entityType).eq("entity_id",entityId).order("created_at",{ascending:false});
-  if(error){setMessage(error.message);return;} setFiles(data||[]);
- }
- useEffect(()=>{void load();},[entityId]);
  async function upload(file?:File){
   if(!file)return;
   setMessage("");
@@ -45,34 +37,13 @@ export default function TransactionEvidence({db,entityType,entityId,user,fullNam
   const {data,error}=await db.storage.from("ems-documents").createSignedUrl(path,600);
   if(error){setMessage(error.message);return;} if(data?.signedUrl)window.open(data.signedUrl,"_blank","noopener,noreferrer");
  }
- async function acknowledge(){
-  if(!confirmed){setMessage("Tick the acknowledgement checkbox before recording your approval.");return;}
-  setBusy(true);setMessage("");
-  const {error}=await db.rpc("ems_record_approval_acknowledgement",{p_entity_type:entityType,p_entity_id:entityId,p_approval_stage:stage,p_decision:decision,p_comments:comments||null});
-  setMessage(error?error.message:"Your authenticated approval acknowledgement has been recorded in the immutable audit register.");
-  if(!error){setConfirmed(false);setComments("");}
-  setBusy(false);
- }
  return <div style={box}>
-  <b>Supporting documents & approval acknowledgement</b>
+  <b>Supporting documents</b>
   <p style={{margin:"4px 0 9px",fontSize:13,color:"#536273"}}>Attach delivery notes and other evidence. Files are stored in a private EMS bucket and opened using time-limited links.</p>
   <label style={{display:"inline-flex",gap:8,alignItems:"center",flexWrap:"wrap",fontSize:14}}>
    <input type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx,.ppt,.pptx" disabled={busy} onChange={e=>{void upload(e.target.files?.[0]);e.currentTarget.value="";}}/>
   </label>
   {files.length>0&&<ul style={{margin:"8px 0",paddingLeft:20}}>{files.map(f=><li key={f.id} style={{fontSize:13,margin:"4px 0"}}><button type="button" onClick={()=>void openFile(f.storage_path)} style={{border:0,background:"none",color:"#145b87",textDecoration:"underline",cursor:"pointer",padding:0}}>{f.file_name}</button> · {(f.file_size/1024/1024).toFixed(2)} MB · {f.uploaded_by_name}</li>)}</ul>}
-  <div style={{borderTop:"1px solid #d9e2ea",marginTop:10,paddingTop:10}}>
-   <b style={{fontSize:14}}>Electronic approval acknowledgement</b>
-   <p style={{fontSize:12,color:"#536273",margin:"3px 0 8px"}}>This records your authenticated account, role, decision and timestamp. It is an approval acknowledgement, not a certificate-based digital signature.</p>
-   <select value={decision} onChange={e=>setDecision(e.target.value)} style={{padding:8,border:"1px solid #cbd5df",borderRadius:7,marginRight:8}}>
-    <option value="approved">Approved</option><option value="rejected">Rejected</option><option value="reviewed">Reviewed</option><option value="closed">Closed</option>
-   </select>
-   <input value={comments} onChange={e=>setComments(e.target.value)} placeholder="Approval comments (optional)" style={{padding:8,border:"1px solid #cbd5df",borderRadius:7,maxWidth:360,width:"100%"}}/>
-   <label style={{display:"flex",gap:8,alignItems:"flex-start",fontSize:13,margin:"9px 0"}}>
-    <input type="checkbox" checked={confirmed} onChange={e=>setConfirmed(e.target.checked)}/>
-    I confirm that I have reviewed this transaction and its supporting evidence, and personally acknowledge the selected decision.
-   </label>
-   <button type="button" style={smallBtn} disabled={busy||!confirmed} onClick={()=>void acknowledge()}>Record acknowledgement</button>
-  </div>
-  {message&&<p role="status" style={{fontSize:12,margin:"8px 0 0",color:message.includes("could not")||message.includes("exceeds")||message.includes("Unsupported")?"#a12a2a":"#17633a"}}>{message}</p>}
+  {message&&<p role="status" style={{fontSize:12,margin:"8px 0 0",color:"#a12a2a"}}>{message}</p>}
  </div>;
 }
