@@ -128,7 +128,7 @@ export default function CompliancePage() {
     <EmsPageHeader active="safety"/><div style={{maxWidth:1240,margin:"0 auto"}}>
       <header style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:16,flexWrap:"wrap",marginBottom:22}}>
         <div><a href="/" style={{color:"#315a75",textDecoration:"none",fontWeight:700}}>← EMS Dashboard</a><h1 style={{margin:"10px 0 4px",fontSize:30}}>Compliance & Incident Register</h1><p style={{margin:0,color:"#667085"}}>Crocodile River Mine · Signed in as {profile.full_name} · {role.replaceAll("_"," ")}</p></div>
-        <img src="/images/eastplats-reference-logo.svg" alt="Eastplats Barplats Mines logo" style={{width:160,maxHeight:70,objectFit:"contain"}} />
+        <img src="/images/eastplats-reference-logo.png" alt="Eastplats Barplats Mines logo" style={{width:160,maxHeight:70,objectFit:"contain"}} />
       </header>
       {error && <p role="alert" style={{background:"#fff0f0",color:"#9b2424",padding:12,borderRadius:8}}>{error}</p>}
       {message && <p style={{background:"#eaf6ef",color:"#17633a",padding:12,borderRadius:8}}>{message}</p>}
