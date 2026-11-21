@@ -47,7 +47,7 @@ export default function ApprovalsPage(){
   inspections:(isManager||isAdmin)?inspections.length:0
  };
  const total=Object.values(counts).reduce((a,b)=>a+b,0);
- async function finish(promise:PromiseLike<any>,success:string){setBusy(true);setError("");setNotice("");const {error:e}=await promise;if(e)setError(e.message);else{setNotice(success);setNotes({});await load();}setBusy(false);}
+ async function finish(promise:PromiseLike<any>,success:string):Promise<boolean>{setBusy(true);setError("");setNotice("");const {error:e}=await promise;if(e)setError(e.message);else{setNotice(success);setNotes({});await load();}setBusy(false);return !e;}\n async function recordApproval(entityType:string,id:string,stage:string,decision:string,comments:string){const {error:e}=await db!.rpc("ems_record_approval_acknowledgement",{p_entity_type:entityType,p_entity_id:id,p_approval_stage:stage,p_decision:decision,p_comments:comments||null});if(e)setError("Action completed, but approval acknowledgement failed: "+e.message);}
  async function decideMovement(r:Row,decision:"shiftboss_approved"|"posted"|"rejected"){
   if(!db||!user)return;
   const next=decision==="shiftboss_approved"?"pending_approval":r.status;
@@ -58,17 +58,17 @@ export default function ApprovalsPage(){
   if(!db)return;const items=dailyItems.filter(i=>i.order_id===r.id);
   const pitems=decision==="approve"?items.map(i=>({id:i.id,quantity_approved:Number(quantities[i.id]??i.quantity_requested)})):[];
   if(decision==="approve"&&pitems.some((x,i)=>!Number.isFinite(x.quantity_approved)||x.quantity_approved<0||x.quantity_approved>Number(items[i].quantity_requested))){setError("Approved quantities must be zero or more and cannot exceed the quantities requested.");return;}
-  await finish(db.rpc("ems_process_daily_order",{p_order_id:r.id,p_decision:decision,p_items:pitems,p_comments:notes[r.id]||null}),decision==="approve"?"Daily explosive request approved.":"Daily request rejected.");
+  if(!window.confirm("I confirm that I have reviewed this daily explosive request and personally acknowledge this decision."))return;\n  const ok=await finish(db.rpc("ems_process_daily_order",{p_order_id:r.id,p_decision:decision,p_items:pitems,p_comments:notes[r.id]||null}),decision==="approve"?"Daily explosive request approved.":"Daily request rejected.");\n  if(ok)await recordApproval("daily_order",r.id,isAdmin?"admin":"shift_boss",decision==="approve"?"approved":"rejected",notes[r.id]||"");
  }
  async function decideProduct(r:Row,decision:"approved"|"rejected"){
   if(!db||!user)return;if(r.submitted_by===user.id&&!isAdmin){setError("You cannot approve a product you submitted yourself.");return;}
-  await finish(db.from("ems_explosive_products").update({approval_status:decision,approved_by:user.id,approved_at:new Date().toISOString(),approval_notes:notes[r.id]||r.approval_notes||null,is_active:decision==="approved"}).eq("id",r.id).eq("approval_status","pending_approval"),decision==="approved"?"Product approved and activated.":"Product rejected.");
+  if(!window.confirm("I confirm that I have reviewed this explosive product submission and personally acknowledge this decision."))return;\n  const ok=await finish(db.from("ems_explosive_products").update({approval_status:decision,approved_by:user.id,approved_at:new Date().toISOString(),approval_notes:notes[r.id]||r.approval_notes||null,is_active:decision==="approved"}).eq("id",r.id).eq("approval_status","pending_approval"),decision==="approved"?"Product approved and activated.":"Product rejected.");\n  if(ok)await recordApproval("explosive_product",r.id,isAdmin?"admin":isManager?"mine_manager":"shift_boss",decision==="approved"?"approved":"rejected",notes[r.id]||"");
  }
  async function decidePurchase(r:Row,decision:"approve"|"reject"){
-  if(!db)return;await finish(db.rpc("ems_process_purchase_order_approval",{p_order_id:r.id,p_decision:decision,p_comments:notes[r.id]||null}),decision==="approve"?"Supplier order approval recorded.":"Supplier order rejected.");
+  if(!db)return;if(!window.confirm("I confirm that I have reviewed this supplier order and personally acknowledge this decision."))return;\n  const ok=await finish(db.rpc("ems_process_purchase_order_approval",{p_order_id:r.id,p_decision:decision,p_comments:notes[r.id]||null}),decision==="approve"?"Supplier order approval recorded.":"Supplier order rejected.");\n  if(ok)await recordApproval("purchase_order",r.id,r.status==="pending_shift_boss"?"shift_boss":isAdmin?"admin":"mine_manager",decision==="approve"?"approved":"rejected",notes[r.id]||"");
  }
  async function decideStocktake(r:Row,decision:"approve"|"reject"){
-  if(!db)return;await finish(db.rpc("ems_review_stocktake",{p_stocktake_id:r.id,p_decision:decision,p_notes:notes[r.id]||null}),decision==="approve"?"Stock count approved. Any authorised variance adjustment has been posted.":"Stock count rejected.");
+  if(!db)return;if(!window.confirm("I confirm that I have reviewed this magazine stock count and personally acknowledge this decision."))return;\n  const ok=await finish(db.rpc("ems_review_stocktake",{p_stocktake_id:r.id,p_decision:decision,p_notes:notes[r.id]||null}),decision==="approve"?"Stock count approved. Any authorised variance adjustment has been posted.":"Stock count rejected.");\n  if(ok)await recordApproval("stocktake",r.id,isAdmin?"admin":"mine_manager",decision==="approve"?"approved":"rejected",notes[r.id]||"");
  }
  async function reviewIncident(r:Row,status:string){if(!db||!user)return;await finish(db.from("ems_incidents").update({status,reviewed_by:user.id,reviewed_at:new Date().toISOString(),review_notes:notes[r.id]||null,closed_at:status==="closed"?new Date().toISOString():null}).eq("id",r.id),status==="closed"?"Incident reviewed and closed.":"Incident review status updated.");}
  async function closeInspection(r:Row){if(!db||!user)return;await finish(db.from("ems_inspections").update({status:"closed",verified_by:user.id,verified_at:new Date().toISOString()}).eq("id",r.id),"Inspection verified and closed.");}
