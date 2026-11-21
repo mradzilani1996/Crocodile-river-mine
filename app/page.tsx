@@ -606,7 +606,7 @@ export default function Home() {
         </div>
       </section>
       <div className="features"><article><b>01 / CONTROL</b><h3>Central magazine records</h3><p>Maintain one accountable system record for the mine's magazine.</p></article><article><b>02 / ACCOUNTABILITY</b><h3>Role-based access</h3><p>System access is limited according to each approved user profile.</p></article><article><b>03 / TRACEABILITY</b><h3>Auditable records</h3><p>Maintain a clear record of authorised system activity and approvals.</p></article></div>
-      <footer>CROCODILE RIVER MINE · EXPLOSIVES MANAGEMENT SYSTEM</footer>
+      <footer>CROCODILE RIVER MINE · EXPLOSIVES MANAGEMENT SYSTEM<br /><span style={{display:"block",marginTop:8,fontWeight:600,letterSpacing:".04em"}}>Product of Matt Tech Solutions (Pty) Ltd · 2026</span></footer>
     </main>
   );
 
