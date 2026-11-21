@@ -2,7 +2,8 @@ type Props = { active?: string };
 
 const links = [
   { href: "/", label: "Home", key: "home" },
-  { href: "/stock-control", label: "Stock & movements", key: "stock" },\n  { href: "/approvals", label: "Approval Centre", key: "approvals" },
+  { href: "/stock-control", label: "Stock & movements", key: "stock" },
+  { href: "/approvals", label: "Approval Centre", key: "approvals" },
   { href: "/operations", label: "Magazine tasks", key: "operations" },
   { href: "/compliance", label: "Safety & incidents", key: "safety" },
   { href: "/reports", label: "Reports", key: "reports" },
