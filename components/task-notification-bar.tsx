@@ -20,7 +20,7 @@ export default function TaskNotificationBar(){
     const {data:profile}=await db.from("ems_profiles").select("role,is_active").eq("user_id",user.id).maybeSingle() as {data:Profile|null};
     if(!profile?.is_active){setTasks([]);setNotifications([]);return;}
     const {data:noticeRows}=await db.from("ems_user_notifications").select("id,title,message,href,created_at").eq("recipient_user_id",user.id).is("read_at",null).order("created_at",{ascending:false}).limit(10);
-    setNotifications((noticeRows||[]) as UserNotification[]);
+    const incoming=(noticeRows||[]) as UserNotification[];\n    setNotifications(incoming);\n    if(incoming.length>0)setExpanded(true);
     const role=profile.role||"";
     const admin=role==="admin", shift=role==="authorising_officer", manager=role==="management";
     const jobs:PromiseLike<any>[]=[];
@@ -56,7 +56,7 @@ export default function TaskNotificationBar(){
       .on("postgres_changes",{event:"*",schema:"public",table:"ems_daily_orders"},refresh)
       .on("postgres_changes",{event:"*",schema:"public",table:"ems_explosive_products"},refresh)
       .on("postgres_changes",{event:"*",schema:"public",table:"ems_purchase_orders"},refresh)
-      .on("postgres_changes",{event:"*",schema:"public",table:"ems_stocktakes"},refresh)
+      .on("postgres_changes",{event:"*",schema:"public",table:"ems_user_notifications",filter:`recipient_user_id=eq.${user.id}`},refresh)\n      .on("postgres_changes",{event:"*",schema:"public",table:"ems_stocktakes"},refresh)
       .on("postgres_changes",{event:"*",schema:"public",table:"ems_incidents"},refresh)
       .on("postgres_changes",{event:"*",schema:"public",table:"ems_inspections"},refresh)
       .subscribe();
@@ -64,17 +64,17 @@ export default function TaskNotificationBar(){
   },[db,user,refresh]);
 
   const total=tasks.reduce((sum,t)=>sum+t.count,0)+notifications.length;
-  if(!user||(!tasks.length&&!notifications.length))return null;
+  if(!user)return null;
   return <aside role="status" aria-live="polite" style={{position:"sticky",top:0,zIndex:40,background:"#fff8e7",borderBottom:"1px solid #f0d48a",color:"#382b12",padding:"10px 16px",boxShadow:"0 2px 8px rgba(0,0,0,.06)"}}>
     <div style={{maxWidth:1400,margin:"0 auto",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
       <button type="button" onClick={()=>setExpanded(v=>!v)} aria-expanded={expanded} style={{display:"flex",alignItems:"center",gap:10,border:0,background:"transparent",color:"inherit",fontSize:15,fontWeight:800,cursor:"pointer",padding:4}}>
         <span aria-hidden="true" style={{fontSize:21}}>🔔</span>
-        <span>You have {total} notification{total===1?"":"s"} / task{total===1?"":"s"}</span>
+        <span>{total>0?`You have ${total} notification${total===1?"":"s"} / task${total===1?"":"s"}`:"No pending notifications or tasks"}</span>
         <span style={{background:"#b42318",color:"#fff",borderRadius:20,minWidth:25,textAlign:"center",padding:"2px 8px"}}>{total}</span>
         <span style={{fontSize:12}}>{expanded?"▲":"▼"}</span>
       </button>
       <div style={{display:"flex",alignItems:"center",gap:12}}>
-        <a href="/approvals" style={{color:"#174a70",fontWeight:800,textDecoration:"underline"}}>Open tasks</a>
+        <a href="/approvals" style={{color:"#174a70",fontWeight:800,textDecoration:"underline"}}>Open Approval Centre</a>
         <button type="button" onClick={()=>refresh()} style={{border:"1px solid #c9ad70",borderRadius:7,padding:"7px 11px",background:"#fff",fontWeight:700,cursor:"pointer"}}>Refresh</button>
       </div>
     </div>
