@@ -268,7 +268,7 @@ export default function Home() {
 
   async function reviewExplosiveProduct(product: Product, decision: "approved" | "rejected") {
     if (!supabase || !user || !canApproveProducts) return;
-    if (product.submitted_by === user.id) { setError("A product must be approved by someone other than the person who submitted it."); return; }
+    if (product.submitted_by === user.id && profile?.role !== "admin") { setError("Only an Administrator may approve a product they personally submitted."); return; }
     setBusy(true); setError(""); setNotice("");
     const { error: reviewError } = await supabase.from("ems_explosive_products").update({
       approval_status: decision, approved_by: user.id, approved_at: new Date().toISOString(),
