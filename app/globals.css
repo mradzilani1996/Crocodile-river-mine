@@ -440,3 +440,55 @@ td{font-size:12px;padding:15px 11px;line-height:1.45}
  .app-shell .sidebar .side-brand strong{font-size:10px}
  .app-shell .sidebar .side-brand span{font-size:9px}
 }
+
+
+/* Final logo visibility fix: use the official Eastplats SVG at a readable size */
+.login-shell .topbar{min-height:112px;height:auto;padding:12px 0;overflow:visible}
+.login-shell .brand{display:flex;align-items:center;gap:22px;min-width:0}
+.login-shell .brand-logo{
+  display:block!important;
+  width:340px!important;height:92px!important;flex:0 0 340px!important;
+  max-width:none!important;min-width:0;object-fit:contain!important;
+  object-position:center!important;background:#fff!important;
+  border:2px solid #f3c323;border-radius:8px;padding:9px 13px;
+  opacity:1!important;visibility:visible!important;
+}
+.login-shell .brand>div{padding-left:18px}
+.login-shell .brand strong{font-size:17px!important;line-height:1.45}
+.login-shell .brand span{font-size:13px!important;line-height:1.5}
+.app-shell .sidebar .side-brand{
+  display:flex;flex-direction:column;align-items:flex-start;gap:12px;
+  width:100%;padding:8px 6px 22px;
+}
+.app-shell .sidebar .side-brand .side-logo{
+  display:block!important;width:205px!important;height:94px!important;
+  flex:0 0 94px!important;max-width:100%!important;
+  object-fit:contain!important;object-position:center!important;
+  background:#fff!important;border:2px solid #f3c323!important;
+  border-radius:8px;padding:10px 12px;opacity:1!important;visibility:visible!important;
+}
+.app-shell .sidebar .side-brand>div{width:100%;min-width:0;padding:0!important;border:0!important}
+.app-shell .sidebar .side-brand strong{font-size:13px!important;line-height:1.45}
+.app-shell .sidebar .side-brand span{font-size:11px!important;line-height:1.5}
+@media(max-width:850px){
+ .login-shell .topbar{gap:8px}
+ .login-shell .brand{gap:10px}
+ .login-shell .brand-logo{width:205px!important;height:68px!important;flex-basis:205px!important;padding:7px}
+ .login-shell .brand>div{padding-left:9px}
+ .login-shell .brand strong{font-size:11px!important;letter-spacing:.7px}
+ .login-shell .brand span{font-size:9px!important;letter-spacing:.5px}
+}
+@media(max-width:650px){
+ .login-shell .topbar{min-height:82px;height:auto;padding:9px 0}
+ .login-shell .brand{gap:8px}
+ .login-shell .brand-logo{width:145px!important;height:56px!important;flex-basis:145px!important;padding:5px}
+ .login-shell .brand>div{padding-left:7px}
+ .login-shell .brand strong{font-size:9px!important;letter-spacing:.3px}
+ .login-shell .brand span{font-size:7px!important;letter-spacing:.2px}
+ .login-shell .secure{font-size:6px;padding:5px}
+ .app-shell .sidebar .side-brand{display:flex;flex-direction:row;align-items:center;gap:12px}
+ .app-shell .sidebar .side-brand .side-logo{width:150px!important;height:68px!important;flex:0 0 150px!important;padding:6px}
+ .app-shell .sidebar .side-brand>div{width:auto;flex:1}
+ .app-shell .sidebar .side-brand strong{font-size:10px!important}
+ .app-shell .sidebar .side-brand span{font-size:8px!important}
+}
