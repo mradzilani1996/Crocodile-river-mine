@@ -17,6 +17,17 @@ type PurchaseApproval = { id:string; order_id:string; approval_stage:string; dec
 type PurchaseDelivery = { id:string; delivery_number:number; order_id:string; supplier_delivery_note:string; received_date:string; received_by:string; received_by_name:string; notes:string|null; created_at:string };
 type PurchaseDeliveryItem = { id:string; delivery_id:string; order_item_id:string; quantity_received:number; notes:string|null };
 
+function EastplatsLogo({ className }: { className: string }) {
+  return (
+    <svg className={className} viewBox="0 0 470 120" role="img" aria-label="Eastplats corporate logo" xmlns="http://www.w3.org/2000/svg">
+      <path d="M66 7 52 11 43 20 32 23 26 34 17 39 20 51 13 61 18 72 15 82 23 91 29 104 41 111 50 105 57 93 61 79 69 67 75 54 73 42 82 31 76 22 68 17Z" fill="#17613d"/>
+      <path d="M41 96 50 105 57 93 61 79 54 82 48 91Z" fill="#f2c52b"/>
+      <path d="M74 37 87 30 97 34 106 28 115 33 111 42 99 45 90 42 82 49Z" fill="#17613d"/>
+      <text x="116" y="83" fontFamily="Arial, Helvetica, sans-serif" fontSize="58" fontWeight="700" letterSpacing="1.2" fill="#ffffff" stroke="#17613d" strokeWidth="2.6" paintOrder="stroke">EASTPLATS</text>
+    </svg>
+  );
+}
+
 export default function Home() {
   const supabase = useMemo(() => {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -576,7 +587,7 @@ export default function Home() {
 
   if (resetMode || !user || !profile) return (
     <main className="shell login-shell">
-      <header className="topbar"><div className="brand"><img className="brand-logo" src="/images/eastplats-reference-logo.svg?v=4" alt="Eastplats corporate logo for Crocodile River Mine" style={{display:"block",width:230,height:70,objectFit:"contain",flexShrink:0,background:"#ffffff",padding:"4px",borderRadius:4}} /><div><strong>CROCODILE RIVER MINE</strong><span>EXPLOSIVES MANAGEMENT SYSTEM</span></div></div><div className="secure">SECURE ACCESS</div></header>
+      <header className="topbar"><div className="brand"><EastplatsLogo className="brand-logo" /><div><strong>CROCODILE RIVER MINE</strong><span>EXPLOSIVES MANAGEMENT SYSTEM</span></div></div><div className="secure">SECURE ACCESS</div></header>
       <section className="hero">
         <div className="eyebrow">CONTROLLED INVENTORY · TRACEABLE APPROVALS</div>
         <h1>Explosives <em>Management</em></h1>
@@ -613,7 +624,7 @@ export default function Home() {
   return (
     <main className="app-shell">
       <aside className="sidebar">
-        <div className="side-brand"><img className="side-logo" src="/images/eastplats-reference-logo.svg?v=4" alt="Eastplats corporate logo for Crocodile River Mine" /><div><strong>CROCODILE RIVER MINE</strong><span>EXPLOSIVES MANAGEMENT</span></div></div>
+        <div className="side-brand"><EastplatsLogo className="side-logo" /><div><strong>CROCODILE RIVER MINE</strong><span>EXPLOSIVES MANAGEMENT</span></div></div>
         <div className="nav-caption">MAIN MENU</div>
         <button className={section === "overview" ? "nav-item active" : "nav-item"} onClick={() => setSection("overview")}>▤ <span>Home</span></button>
         <button className={section === "products" ? "nav-item active" : "nav-item"} onClick={() => setSection("products")}>▤ <span>Product register</span></button>
