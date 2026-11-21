@@ -94,6 +94,7 @@ export default function Home() {
   const [draftOrderItems, setDraftOrderItems] = useState([{ product_id: "", quantity_requested: "", notes: "" }]);
   const [inviteFullName, setInviteFullName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
+  const [invitePassword, setInvitePassword] = useState("");
   const [inviteRole, setInviteRole] = useState("issuer");
   const [dataLoading, setDataLoading] = useState(false);
   const [authChecking, setAuthChecking] = useState(true);
@@ -313,13 +314,13 @@ export default function Home() {
     if (!supabase || profile?.role !== "admin") return;
     setBusy(true); setError(""); setNotice("");
     const { data, error: inviteError } = await supabase.functions.invoke("ems-admin-invite-user", {
-      body: { full_name: inviteFullName.trim(), email: inviteEmail.trim(), role: inviteRole }
+      body: { full_name: inviteFullName.trim(), email: inviteEmail.trim(), password: invitePassword, role: inviteRole }
     });
     if (inviteError || data?.error) {
       setError("Staff invitation could not be sent: " + (inviteError?.message || data?.error || "Unknown error"));
     } else {
       setNotice("Invitation sent to " + inviteEmail.trim() + ". The staff member must use the email link to set their password.");
-      setInviteFullName(""); setInviteEmail(""); setInviteRole("issuer");
+      setInviteFullName(""); setInviteEmail(""); setInvitePassword(""); setInviteRole("issuer");
       await loadDashboard();
     }
     setBusy(false);
@@ -658,10 +659,11 @@ export default function Home() {
                 <div className="order-fields">
                   <label>Full name<input value={inviteFullName} onChange={e=>setInviteFullName(e.target.value)} required placeholder="Staff member's full name" /></label>
                   <label>Work email<input type="email" value={inviteEmail} onChange={e=>setInviteEmail(e.target.value)} required placeholder="name@company.co.za" /></label>
+                  <label>Set account password<input type="password" autoComplete="new-password" minLength={12} value={invitePassword} onChange={e=>setInvitePassword(e.target.value)} required placeholder="At least 12 characters" /></label>
                   <label>EMS role<select value={inviteRole} onChange={e=>setInviteRole(e.target.value)}><option value="issuer">Issuer</option><option value="magazine_master">Magazine Master</option><option value="authorising_officer">Authorising Officer</option><option value="management">Management</option></select></label>
                 </div>
-                <div className="info-note">An invitation email will be sent. The invited person must set their own password. Administrator access is not assignable from this screen.</div>
-                <button className="primary-btn" disabled={busy}>{busy ? "Sending invitation…" : "Send staff invitation"}</button>
+                <div className="info-note">The administrator sets the staff member’s initial sign-in password. Give it to the employee securely and ask them not to share it. If they forget it, they can select “Create your password / Forgot password” on the login page and receive a secure reset link. Administrator access is not assignable from this screen.</div>
+                <button className="primary-btn" disabled={busy || invitePassword.length < 12}>{busy ? "Creating account…" : "Create staff account"}</button>
               </form>
               <div className="table-wrap"><table><thead><tr><th>NAME</th><th>EMAIL</th><th>ROLE</th><th>ACCESS</th></tr></thead><tbody>{profiles.map(p=><tr key={p.user_id}>
                 <td><b>{p.full_name}</b>{p.user_id===user?.id?<div className="order-subtext">Your administrator account</div>:null}</td>
