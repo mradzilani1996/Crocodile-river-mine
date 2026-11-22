@@ -44,6 +44,7 @@ export default function Home() {
   const [magazineName, setMagazineName] = useState("");
   const [responsibleUserId, setResponsibleUserId] = useState("");
   const [assignedMagazineMasterName, setAssignedMagazineMasterName] = useState("");
+  const [isAssignedMagazineMaster, setIsAssignedMagazineMaster] = useState(false);
   const [profiles, setProfiles] = useState<EMSProfile[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [productCode, setProductCode] = useState("");
@@ -139,7 +140,11 @@ export default function Home() {
     ]);
     let allPostedLedgerRows:LedgerTransaction[]=[];let ledgerOffset=0;let ledgerLoadError:string|null=null;
     while(true){const page=await supabase.from("ems_stock_transactions").select("id,transaction_number,transaction_type,status,product_id,quantity,transaction_date,reference_number,source_or_destination,issued_to,purpose,notes,adjustment_direction,control_book_section,container_number,item_type,item_description,package_quantity,unit_quantity,work_section,miner_company_number,miner_name,miner_acknowledged").eq("status","posted").order("transaction_date",{ascending:true}).order("transaction_number",{ascending:true}).range(ledgerOffset,ledgerOffset+999);if(page.error){ledgerLoadError=page.error.message;break;}const batch=(page.data||[]) as LedgerTransaction[];allPostedLedgerRows=allPostedLedgerRows.concat(batch);if(batch.length<1000)break;ledgerOffset+=1000;}
-    const assignedMasterResult = await supabase.rpc("ems_get_assigned_magazine_master_name");
+    const [assignedMasterResult, assignedPermissionResult] = await Promise.all([
+      supabase.rpc("ems_get_assigned_magazine_master_name"),
+      supabase.rpc("ems_is_current_user_assigned_magazine_master")
+    ]);
+    setIsAssignedMagazineMaster(assignedPermissionResult.data === true);
     if (assignedMasterResult.error) setAssignedMagazineMasterName("");
     else setAssignedMagazineMasterName(assignedMasterResult.data || "");
     if (mag.error) setError("Could not load magazine details. Check the database permissions.");
@@ -516,7 +521,7 @@ export default function Home() {
 
   const activePeople = profiles.filter(p => p.is_active);
   const activeProducts = products.filter(p => p.is_active && p.approval_status === "approved");
-  const isAppointedMagazineMaster = profile?.role === "magazine_master" && magazine?.responsible_user_id === user?.id;
+  const isAppointedMagazineMaster = profile?.role === "magazine_master" && (magazine?.responsible_user_id === user?.id || isAssignedMagazineMaster);
   const canManageProducts = profile?.role === "admin" || isAppointedMagazineMaster;
   const canApproveProducts = profile?.role === "admin" || profile?.role === "authorising_officer" || profile?.role === "management";
   const canReviewProductStage = (status: string) => profile?.role === "admin" || (status === "pending_shift_boss" && profile?.role === "authorising_officer") || (status === "pending_management" && profile?.role === "management");
