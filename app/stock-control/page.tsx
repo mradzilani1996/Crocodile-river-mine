@@ -26,7 +26,7 @@ export default function StockControlPage(){
  if(["admin","management"].includes(profile?.role||"")){const a=await db.from("ems_audit_log").select("id,actor_user_id,actor_name,action,table_name,record_id,old_data,new_data,occurred_at").order("occurred_at",{ascending:false}).limit(300);if(a.error)setError(a.error.message);setAudit(a.data||[]);}
  }
  useEffect(()=>{if(!db)return;db.auth.getSession().then(async({data})=>{const u=data.session?.user;if(!u)return;setUser(u);const {data:p,error:e}=await db.from("ems_profiles").select("full_name,role,is_active").eq("user_id",u.id).maybeSingle();if(e||!p?.is_active){setError(e?.message||"Active EMS profile not found.");return;}setProfile(p);});},[db]);
- useEffect(()=>{if(profile)load();},[profile]);
+ useEffect(()=>{if(!profile)return;void load();const refresh=window.setInterval(()=>{void load();},15000);return()=>window.clearInterval(refresh);},[profile]);
  useEffect(()=>{if(profile?.role==="issuer")setType("issue");},[profile?.role]);
  const role=profile?.role||"",isAppointedMagazineMaster=role==="magazine_master"&&appointedMagazineMasterId===user?.id,canApprove=["admin","authorising_officer","management"].includes(role),canPost=role==="admin"||isAppointedMagazineMaster,canCreate=role==="admin"||role==="issuer"||isAppointedMagazineMaster;
  const posted=rows.filter(r=>r.status==="posted");
