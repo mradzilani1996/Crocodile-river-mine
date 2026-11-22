@@ -26,9 +26,17 @@ export default function TaskNotificationBar(){
     if(noticeError){setNotificationError("Notifications could not be loaded: "+noticeError.message);}else{setNotificationError("");}
     const incoming=(noticeRows||[]) as UserNotification[];
     setNotifications(incoming);
+    // A toast is only valid while its notification is still unread.
+    // Clear it as soon as it is read/resolved or no longer returned by Supabase.
+    if(toastNotification && !incoming.some(n=>n.id===toastNotification.id)){
+      setToastNotification(null);
+    }
     if(incoming.length>0){
       setExpanded(true);
       if(lastToastId.current!==incoming[0].id){lastToastId.current=incoming[0].id;setToastNotification(incoming[0]);}
+    }else{
+      lastToastId.current=null;
+      setToastNotification(null);
     }
     const role=profile.role||"";
     const admin=role==="admin", shift=role==="authorising_officer", manager=role==="management";
