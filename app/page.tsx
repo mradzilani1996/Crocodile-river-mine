@@ -523,7 +523,7 @@ export default function Home() {
   const canReviewProductStage = (status: string) => profile?.role === "admin" || (status === "pending_shift_boss" && profile?.role === "authorising_officer") || (status === "pending_management" && profile?.role === "management");
   const pendingStock = pendingMovementCount;
   const pendingDaily = dailyOrders.filter(o => o.status === "submitted").length;
-  const pendingProducts = products.filter(p => p.approval_status === "pending_approval").length;
+  const pendingProducts = products.filter(p => ["pending_shift_boss","pending_management"].includes(p.approval_status)).length;
   const pendingSupplierOrders = purchaseOrders.filter(o => ["pending_shift_boss","pending_mine_overseer"].includes(o.status)).length;
   const pending = pendingStock + pendingDaily + pendingProducts + pendingSupplierOrders;
   const canManageMagazine = profile?.role === "admin";
