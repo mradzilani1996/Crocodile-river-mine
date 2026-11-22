@@ -69,6 +69,7 @@ export default function Home() {
   const [dailyApprovalNotes, setDailyApprovalNotes] = useState<Record<string,string>>({});
   const [dailyIssueOrderId, setDailyIssueOrderId] = useState("");
   const [dailyIssueAck, setDailyIssueAck] = useState(false);
+  const [dailyIssuerName, setDailyIssuerName] = useState("");
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [purchaseOrderItems, setPurchaseOrderItems] = useState<PurchaseOrderItem[]>([]);
   const [purchaseApprovals, setPurchaseApprovals] = useState<PurchaseApproval[]>([]);
@@ -422,10 +423,12 @@ export default function Home() {
         ? "Request approved with the authorised quantities. The Issuer can now prepare the issue."
         : "Request rejected. The reason has been recorded.";
     } else {
-      if (dailyIssueOrderId !== order.id || !dailyIssueAck) {
-        setError("Confirm the named miner's acknowledgement before issuing explosives.");
+      if (dailyIssueOrderId !== order.id || !dailyIssueAck || !dailyIssuerName.trim()) {
+        setError("Enter the full name of the person issuing the explosives and confirm the miner's acknowledgement.");
         setBusy(false); return;
       }
+      const { error: issuerError } = await supabase.rpc("ems_set_daily_order_issuer", { p_order_id: order.id, p_issuer_name: dailyIssuerName.trim() });
+      if (issuerError) { setError("Issuer name could not be recorded: " + issuerError.message); setBusy(false); return; }
       const { data: created, error: fulfilError } = await supabase.rpc("ems_fulfil_daily_order", {
         p_order_id: order.id,
         p_miner_acknowledged: true
@@ -436,6 +439,7 @@ export default function Home() {
         : "All approved quantities have already been issued and posted.";
       setDailyIssueOrderId("");
       setDailyIssueAck(false);
+      setDailyIssuerName("");
     }
     if (resultMessage) { setNotice(resultMessage); await loadDashboard(); }
     setBusy(false);
@@ -808,8 +812,8 @@ export default function Home() {
                   <td><span className={"state "+(o.status==="approved"?"approved":o.status==="rejected"?"rejected":o.status==="fulfilled"?"posted":"pending_approval")}>{o.status==="pending_shift_boss"?"Awaiting Shiftboss signature":o.status==="pending_mine_overseer"?"Awaiting Mine Manager signature":o.status.replaceAll("_"," ")}</span></td>
                   <td>
                     {canApproveOrders && o.status==="submitted" && <div style={{display:"grid",gap:6,minWidth:150}}><input aria-label="Approval or rejection notes" placeholder="Notes / rejection reason" value={dailyApprovalNotes[o.id]||""} onChange={e=>setDailyApprovalNotes({...dailyApprovalNotes,[o.id]:e.target.value})}/><span className="action-pair"><button className="mini-action" disabled={busy} onClick={()=>updateDailyOrder(o,"approve")}>Approve quantities</button><button className="mini-action danger" disabled={busy} onClick={()=>updateDailyOrder(o,"reject")}>Reject</button></span></div>}
-                    {canPrepareIssue && dailyIssueOrderId!==o.id && <button className="mini-action" disabled={busy} onClick={()=>{setDailyIssueOrderId(o.id);setDailyIssueAck(false);}}>{o.status==="approved"?"Prepare issue":"Issue remaining"}</button>}
-                    {canPrepareIssue && dailyIssueOrderId===o.id && <div style={{display:"grid",gap:8,minWidth:190}}><label style={{display:"flex",gap:7,alignItems:"flex-start"}}><input type="checkbox" checked={dailyIssueAck} onChange={e=>setDailyIssueAck(e.target.checked)}/> I confirm the named miner has acknowledged receipt.</label><span className="action-pair"><button className="mini-action" disabled={busy||!dailyIssueAck} onClick={()=>updateDailyOrder(o,"fulfil")}>Confirm issue</button><button className="mini-action danger" disabled={busy} onClick={()=>{setDailyIssueOrderId("");setDailyIssueAck(false);}}>Cancel</button></span></div>}
+                    {canPrepareIssue && dailyIssueOrderId!==o.id && <button className="mini-action" disabled={busy} onClick={()=>{setDailyIssueOrderId(o.id);setDailyIssueAck(false);setDailyIssuerName(profile?.full_name||"");}}>{o.status==="approved"?"Prepare issue":"Issue remaining"}</button>}
+                    {canPrepareIssue && dailyIssueOrderId===o.id && <div style={{display:"grid",gap:8,minWidth:210}}><label>Full name of Issuer<input aria-label="Full name of Issuer" value={dailyIssuerName} onChange={e=>setDailyIssuerName(e.target.value)} placeholder="Enter the person issuing explosives" required /></label><label style={{display:"flex",gap:7,alignItems:"flex-start"}}><input type="checkbox" checked={dailyIssueAck} onChange={e=>setDailyIssueAck(e.target.checked)}/> I confirm the named miner has acknowledged receipt.</label><span className="action-pair"><button className="mini-action" disabled={busy||!dailyIssueAck||!dailyIssuerName.trim()} onClick={()=>updateDailyOrder(o,"fulfil")}>Confirm issue</button><button className="mini-action danger" disabled={busy} onClick={()=>{setDailyIssueOrderId("");setDailyIssueAck(false);setDailyIssuerName("");}}>Cancel</button></span></div>}
                     {isOwnRequestBlocked ? <span className="order-subtext">You submitted this request. A different authorised issuer must prepare it.</span> : !((canApproveOrders&&o.status==="submitted")||canPrepareIssue) && <span className="order-subtext">—</span>}
                   </td>
                 </tr>;
