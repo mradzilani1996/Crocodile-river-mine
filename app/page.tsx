@@ -135,7 +135,7 @@ export default function Home() {
       supabase.from("ems_purchase_order_approvals").select("id,order_id,approval_stage,decision,comments,actioned_by,actioned_by_name,actioned_at").order("actioned_at"),
       supabase.from("ems_purchase_deliveries").select("id,delivery_number,order_id,supplier_delivery_note,received_date,received_by,received_by_name,notes,created_at").order("received_date",{ascending:false}),
       supabase.from("ems_purchase_delivery_items").select("id,delivery_id,order_item_id,quantity_received,notes").order("created_at"),
-      supabase.from("ems_stock_transactions").select("id",{count:"exact",head:true}).eq("status","pending_approval"),
+      supabase.from("ems_stock_transactions").select("id",{count:"exact",head:true}).in("status", profile?.role === "management" ? ["shiftboss_approved"] : profile?.role === "authorising_officer" ? ["pending_approval"] : ["pending_approval","shiftboss_approved"]),
       supabase.from("ems_document_register").select("id,title,document_number,review_date,status").order("review_date",{ascending:true}).limit(300)
     ]);
     let allPostedLedgerRows:LedgerTransaction[]=[];let ledgerOffset=0;let ledgerLoadError:string|null=null;
@@ -525,10 +525,26 @@ export default function Home() {
   const canManageProducts = profile?.role === "admin" || isAppointedMagazineMaster;
   const canApproveProducts = profile?.role === "admin" || profile?.role === "authorising_officer" || profile?.role === "management";
   const canReviewProductStage = (status: string) => profile?.role === "admin" || (status === "pending_shift_boss" && profile?.role === "authorising_officer") || (status === "pending_management" && profile?.role === "management");
+  // Count only approvals that the signed-in role can action at its current workflow stage.
   const pendingStock = pendingMovementCount;
-  const pendingDaily = dailyOrders.filter(o => o.status === "submitted").length;
-  const pendingProducts = products.filter(p => ["pending_shift_boss","pending_management"].includes(p.approval_status)).length;
-  const pendingSupplierOrders = purchaseOrders.filter(o => ["pending_shift_boss","pending_mine_overseer"].includes(o.status)).length;
+  const pendingDaily = (profile?.role === "admin" || profile?.role === "authorising_officer")
+    ? dailyOrders.filter(o => o.status === "submitted").length : 0;
+  const pendingProducts = products.filter(p =>
+    profile?.role === "admin"
+      ? ["pending_shift_boss","pending_management"].includes(p.approval_status)
+      : profile?.role === "authorising_officer"
+        ? p.approval_status === "pending_shift_boss"
+        : profile?.role === "management"
+          ? p.approval_status === "pending_management" : false
+  ).length;
+  const pendingSupplierOrders = purchaseOrders.filter(o =>
+    profile?.role === "admin"
+      ? ["pending_shift_boss","pending_mine_overseer"].includes(o.status)
+      : profile?.role === "authorising_officer"
+        ? o.status === "pending_shift_boss"
+        : profile?.role === "management"
+          ? o.status === "pending_mine_overseer" : false
+  ).length;
   const pending = pendingStock + pendingDaily + pendingProducts + pendingSupplierOrders;
   const canManageMagazine = profile?.role === "admin";
   const canApproveOrders = profile?.role === "admin" || profile?.role === "authorising_officer";
