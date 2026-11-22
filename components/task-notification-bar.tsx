@@ -82,13 +82,13 @@ export default function TaskNotificationBar(){
     return()=>{window.clearInterval(timer);db.removeChannel(channel);};
   },[db,user,refresh]);
 
-  const total=tasks.reduce((sum,t)=>sum+t.count,0)+notifications.length;
+  // Unread alert records describe the same approval items counted in task queues; do not double-count them in the badge.\n  const total=tasks.reduce((sum,t)=>sum+t.count,0);
   if(!user)return null;
   return <aside role="status" aria-live="polite" style={{position:"sticky",top:0,zIndex:40,background:"#fff8e7",borderBottom:"1px solid #f0d48a",color:"#382b12",padding:"10px 16px",boxShadow:"0 2px 8px rgba(0,0,0,.06)"}}>
     <div style={{maxWidth:1400,margin:"0 auto",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
       <button type="button" onClick={()=>setExpanded(v=>!v)} aria-expanded={expanded} style={{display:"flex",alignItems:"center",gap:10,border:0,background:"transparent",color:"inherit",fontSize:15,fontWeight:800,cursor:"pointer",padding:4}}>
         <span aria-hidden="true" style={{fontSize:21}}>🔔</span>
-        <span>{total>0?`You have ${total} notification${total===1?"":"s"} / task${total===1?"":"s"}`:"No pending notifications or tasks"}</span>
+        <span>{total>0?`You have ${total} pending approval${total===1?"":"s"} / task${total===1?"":"s"}`:notifications.length>0?`You have ${notifications.length} unread alert${notifications.length===1?"":"s"}`:"No pending approvals or notifications"}</span>
         <span style={{background:"#b42318",color:"#fff",borderRadius:20,minWidth:25,textAlign:"center",padding:"2px 8px"}}>{total}</span>
         <span style={{fontSize:12}}>{expanded?"▲":"▼"}</span>
       </button>
