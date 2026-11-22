@@ -82,7 +82,7 @@ export default function ReportsPage() {
           fetchAll("ems_purchase_deliveries", "received_date"),
           fetchAll("ems_incidents", "incident_date"),
           fetchAll("ems_inspections", "inspection_date"),
-          fetchAll("ems_audit_log", "occurred_at")
+          fetchAll("ems_audit_log", "occurred_at").catch(() => [])
         ]);
         if (!alive) return;
         setProducts(p); setMovements(d); setDaily(dl);
