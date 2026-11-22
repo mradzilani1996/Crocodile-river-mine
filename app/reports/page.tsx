@@ -99,8 +99,6 @@ export default function ReportsPage() {
 
   const productApprovals = useMemo(() => products.map(p => ({ product_code: p.product_code, product_name: p.product_name, approval_status: p.approval_status, submitted_by: p.submitted_by || p.created_by, shiftboss_approved_by: p.shiftboss_approved_by, shiftboss_approved_at: p.shiftboss_approved_at, management_approved_by: p.management_approved_by, management_approved_at: p.management_approved_at, approved_by: p.approved_by, approved_at: p.approved_at, approval_notes: p.approval_notes, created_at: p.created_at })), [products]);
 
-  const lowStock = useMemo(() => balances.filter(r => Number(r.minimum || 0) > 0 && Number(r.units || 0) <= Number(r.minimum || 0)), [balances]);
-
   const balances = useMemo(() => {
     const grouped = new Map<string, Row>();
     for (const tx of movements) {
@@ -122,6 +120,8 @@ export default function ReportsPage() {
     }
     return Array.from(grouped.values()).sort((a,b) => String(a.product_name).localeCompare(String(b.product_name)) || String(a.register).localeCompare(String(b.register)));
   }, [movements, products]);
+
+  const lowStock = useMemo(() => balances.filter(r => Number(r.minimum || 0) > 0 && Number(r.units || 0) <= Number(r.minimum || 0)), [balances]);
 
   const source = report === "balances" || report === "product_balances" ? balances : report === "low_stock" ? lowStock : report === "product_register" ? productRegister : report === "product_movements" ? productMovements : report === "product_approvals" ? productApprovals : report === "movements" ? movements : report === "daily" ? daily : report === "deliveries" ? deliveries : report === "incidents" ? incidents : inspections;
   const dateField: Record<ReportKey, string> = { balances: "", movements: "transaction_date", daily: "order_date", deliveries: "received_date", incidents: "incident_date", inspections: "inspection_date", product_register: "created_at", product_movements: "transaction_date", product_approvals: "created_at", product_balances: "", low_stock: "" };
