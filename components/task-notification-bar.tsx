@@ -82,7 +82,8 @@ export default function TaskNotificationBar(){
     return()=>{window.clearInterval(timer);db.removeChannel(channel);};
   },[db,user,refresh]);
 
-  // Unread alert records describe the same approval items counted in task queues; do not double-count them in the badge.\n  const total=tasks.reduce((sum,t)=>sum+t.count,0);
+  // Unread alert records describe the same approval items counted in task queues; do not double-count them in the badge.
+  const total=tasks.reduce((sum,t)=>sum+t.count,0);
   if(!user)return null;
   return <aside role="status" aria-live="polite" style={{position:"sticky",top:0,zIndex:40,background:"#fff8e7",borderBottom:"1px solid #f0d48a",color:"#382b12",padding:"10px 16px",boxShadow:"0 2px 8px rgba(0,0,0,.06)"}}>
     <div style={{maxWidth:1400,margin:"0 auto",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
