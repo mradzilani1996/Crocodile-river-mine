@@ -46,6 +46,7 @@ export default function Home() {
   const [assignedMagazineMasterName, setAssignedMagazineMasterName] = useState("");
   const [isAssignedMagazineMaster, setIsAssignedMagazineMaster] = useState(false);
   const [profiles, setProfiles] = useState<EMSProfile[]>([]);
+  const [activeProfileCount, setActiveProfileCount] = useState(0);
   const [products, setProducts] = useState<Product[]>([]);
   const [productCode, setProductCode] = useState("");
   const [productName, setProductName] = useState("");
@@ -124,7 +125,7 @@ export default function Home() {
   async function loadDashboard() {
     if (!supabase) return;
     setDataLoading(true); setError("");
-    const [mag, people, productRows, txRows, orderRows, orderItemRows, ledgerRows, purchaseRows, purchaseItemRows, approvalRows, deliveryRows, deliveryItemRows, pendingRows, docRows] = await Promise.all([
+    const [mag, people, productRows, txRows, orderRows, orderItemRows, ledgerRows, purchaseRows, purchaseItemRows, approvalRows, deliveryRows, deliveryItemRows, pendingRows, docRows, directoryRows] = await Promise.all([
       supabase.from("ems_magazine").select("magazine_name,responsible_user_id,is_active").eq("singleton", true).maybeSingle(),
       supabase.from("ems_profiles").select("user_id,full_name,email,role,is_active").order("full_name"),
       supabase.from("ems_explosive_products").select("id,product_code,product_name,control_book_section,unit_of_measure,opening_quantity,minimum_stock,is_active,approval_status,submitted_by,approved_by,approved_at,approval_notes").order("product_name"),
@@ -138,7 +139,8 @@ export default function Home() {
       supabase.from("ems_purchase_deliveries").select("id,delivery_number,order_id,supplier_delivery_note,received_date,received_by,received_by_name,notes,created_at").order("received_date",{ascending:false}),
       supabase.from("ems_purchase_delivery_items").select("id,delivery_id,order_item_id,quantity_received,notes").order("created_at"),
       supabase.from("ems_stock_transactions").select("id",{count:"exact",head:true}).in("status", profile?.role === "management" ? ["shiftboss_approved"] : profile?.role === "authorising_officer" ? ["pending_approval"] : ["pending_approval","shiftboss_approved"]),
-      supabase.from("ems_document_register").select("id,title,document_number,review_date,status").order("review_date",{ascending:true}).limit(300)
+      supabase.from("ems_document_register").select("id,title,document_number,review_date,status").order("review_date",{ascending:true}).limit(300),
+      supabase.rpc("ems_get_profile_directory")
     ]);
     let allPostedLedgerRows:LedgerTransaction[]=[];let ledgerOffset=0;let ledgerLoadError:string|null=null;
     while(true){const page=await supabase.from("ems_stock_transactions").select("id,transaction_number,transaction_type,status,product_id,quantity,transaction_date,reference_number,source_or_destination,issued_to,purpose,notes,adjustment_direction,control_book_section,container_number,item_type,item_description,package_quantity,unit_quantity,work_section,miner_company_number,miner_name,miner_acknowledged").eq("status","posted").order("transaction_date",{ascending:true}).order("transaction_number",{ascending:true}).range(ledgerOffset,ledgerOffset+999);if(page.error){ledgerLoadError=page.error.message;break;}const batch=(page.data||[]) as LedgerTransaction[];allPostedLedgerRows=allPostedLedgerRows.concat(batch);if(batch.length<1000)break;ledgerOffset+=1000;}
@@ -152,6 +154,8 @@ export default function Home() {
     if (mag.error) setError("Could not load magazine details. Check the database permissions.");
     else if (mag.data) { setMagazine(mag.data as Magazine); setMagazineName(mag.data.magazine_name); setResponsibleUserId(mag.data.responsible_user_id || ""); }
     if (people.data) setProfiles(people.data as EMSProfile[]);
+    if (!directoryRows.error && Array.isArray(directoryRows.data)) setActiveProfileCount(directoryRows.data.length);
+    else setActiveProfileCount(profile?.is_active ? 1 : 0);
     if (productRows.data) setProducts(productRows.data as Product[]);
     if (txRows.data) setTransactions(txRows.data as Transaction[]);
     if (orderRows.data) setDailyOrders(orderRows.data as DailyOrder[]);
@@ -524,7 +528,7 @@ export default function Home() {
     setBusy(false);
   }
 
-  const activePeople = profiles.filter(p => p.is_active);
+  const activePeopleCount = activeProfileCount;
   const activeProducts = products.filter(p => p.is_active && p.approval_status === "approved");
   const isAppointedMagazineMaster = profile?.role === "magazine_master" && (magazine?.responsible_user_id === user?.id || isAssignedMagazineMaster);
   const canManageProducts = profile?.role === "admin" || isAppointedMagazineMaster;
@@ -702,7 +706,7 @@ export default function Home() {
             <div className="stats-grid">
               <article className="stat-card"><span>ACTIVE MAGAZINE</span><strong className="stat-text">{magazine?.is_active ? "Operational record" : "Inactive"}</strong><small>{magazine?.magazine_name || "Magazine not configured"}</small></article>
               <article className="stat-card"><span>REGISTERED PRODUCTS</span><strong>{activeProducts.length}</strong><small>Active product records</small></article>
-              <article className="stat-card"><span>ACTIVE USERS</span><strong>{activePeople.length}</strong><small>Authorised EMS profiles</small></article>
+              <article className="stat-card"><span>ACTIVE USERS</span><strong>{activePeopleCount}</strong><small>Authorised EMS profiles</small></article>
               <article className="stat-card"><span>AWAITING APPROVAL</span><strong>{pending}</strong><small>Stock, daily requests, products and supplier orders</small></article>
               <article className="stat-card"><span>LOW STOCK ALERTS</span><strong>{lowStockProducts.length}</strong><small>Products at or below minimum</small></article>
               <article className="stat-card"><span>DOCUMENT REVIEWS</span><strong>{dueDocumentReviews.length}</strong><small>Due or due within 30 days</small></article>
@@ -734,7 +738,7 @@ export default function Home() {
           </section>}
           {section === "people" && <section className="data-card wide-card">
             {profile?.role === "admin" ? <>
-              <div className="card-heading"><div><h3>Staff access and responsibilities</h3><p>Invite staff, assign their mine role and deactivate access when they leave or change duties.</p></div><span className="role-pill">{activePeople.length} active</span></div>
+              <div className="card-heading"><div><h3>Staff access and responsibilities</h3><p>Invite staff, assign their mine role and deactivate access when they leave or change duties.</p></div><span className="role-pill">{activePeopleCount} active</span></div>
               <form className="order-form" onSubmit={inviteEMSUser}>
                 <h4>Create a staff account</h4>
                 <div className="order-fields">
