@@ -27,3 +27,21 @@
 @media(max-width:900px){.magazine-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:650px){.magazine-welcome{padding:21px;display:grid}.magazine-role-chip{justify-self:start}.magazine-action-grid{grid-template-columns:1fr}.magazine-action-card{min-height:90px;padding:14px}.magazine-action-card i{font-size:10px}.magazine-summary-grid{gap:9px}.magazine-summary-grid article{padding:14px}.magazine-summary-grid article strong{font-size:25px}}
 @media(prefers-reduced-motion:reduce){.magazine-action-card{transition:none}.magazine-action-card:hover{transform:none}}
+
+/* Clearer, more touch-friendly stock movement capture */
+.stock-step-guide{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:18px 0}
+.stock-step-guide>div{display:flex;align-items:center;gap:9px;min-height:46px;padding:9px 11px;background:#f3f6f8;border:1px solid #e0e6eb;border-radius:9px;color:#425348;font-size:11px;font-weight:700}
+.stock-step-guide b{display:grid;place-items:center;flex:0 0 25px;width:25px;height:25px;border-radius:50%;background:#174d2a;color:#fff;font-size:12px}
+.stock-helper{display:grid;gap:4px;padding:13px 15px;margin:0 0 18px;background:#f0f7f1;border:1px solid #dcebdd;border-radius:9px}
+.stock-helper b{font-size:12px;color:#1b4b2a}.stock-helper span{font-size:11px;line-height:1.55;color:#52675a}
+.stock-movement-form{align-items:start}
+.stock-form-field{min-width:0}
+.stock-movement-form input:not([type=checkbox]),.stock-movement-form select,.stock-movement-form textarea{min-height:44px;font:inherit;font-size:14px}
+.stock-current-balance{border:1px solid #dce8de;background:#f4faf5!important}
+.stock-current-balance>b{font-size:12px;color:#345640}
+.stock-detail-panel{background:#fbfcfd}
+.stock-submit-row{padding-top:8px;border-top:1px solid #e8edf0}
+.stock-optional-details summary{padding:3px 0}
+.stock-movement-form input:focus,.stock-movement-form select:focus,.stock-movement-form textarea:focus{outline:3px solid #d9eadc;outline-offset:1px;border-color:#36744a}
+@media(max-width:720px){.stock-step-guide{grid-template-columns:repeat(2,minmax(0,1fr))}.stock-movement-form{grid-template-columns:1fr!important}.stock-submit-row{align-items:stretch!important}.stock-submit-row button{width:100%}}
+@media(max-width:380px){.stock-step-guide{grid-template-columns:1fr}.stock-step-guide>div{min-height:40px}}
