@@ -524,3 +524,24 @@ td{font-size:12px;padding:15px 11px;line-height:1.45}
  .login-shell .brand-logo{width:145px!important;height:56px!important;flex-basis:145px!important;max-width:44vw!important}
  .app-shell .sidebar .side-brand .side-logo{width:125px!important;height:60px!important;flex-basis:125px!important;max-width:44vw!important}
 }
+
+
+/* Simple collapsible navigation on tablets and phones */
+.mobile-nav-toggle{display:none}
+@media(max-width:1000px){
+  .app-shell .mobile-nav-toggle{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    width:100%;min-height:46px;margin:10px 0 4px;padding:10px 13px;
+    border:1px solid #ffffff35;border-radius:8px;background:#24382a;
+    color:#fff;font-size:14px;font-weight:700;text-align:left;cursor:pointer;
+  }
+  .app-shell .mobile-nav-toggle span{font-size:11px;font-weight:500;color:#c7d4c2}
+  .app-shell .sidebar:not(.mobile-menu-open)>.nav-caption,
+  .app-shell .sidebar:not(.mobile-menu-open)>.nav-item{display:none!important}
+  .app-shell .sidebar:not(.mobile-menu-open){max-height:none;overflow:visible}
+  .app-shell .sidebar.mobile-menu-open{max-height:70vh;overflow-y:auto}
+}
+@media(max-width:620px){
+  .app-shell .mobile-nav-toggle{min-height:48px;font-size:15px}
+  .app-shell .mobile-nav-toggle span{font-size:12px}
+}
