@@ -301,10 +301,9 @@ export default function Home() {
     else if (existing?.length) setNotice("An opening stock movement already exists for this product (" + existing[0].status.replaceAll("_"," ") + "). No duplicate was created.");
     else {
       const qty = Number(product.opening_quantity);
-      const isPackRegister = ["Boxes", "Bags"].includes(product.control_book_section || "");
       const { error: openingError } = await supabase.from("ems_stock_transactions").insert({
         transaction_type: "adjustment", product_id: product.id, quantity: qty,
-        package_quantity: isPackRegister ? qty : 0, unit_quantity: isPackRegister ? 0 : qty,
+        package_quantity: 0, unit_quantity: qty,
         transaction_date: new Date().toISOString(), reference_number: reference,
         purpose: "Opening stock balance", notes: "Opening quantity submitted from the product register. Requires independent Authorising Officer approval and Magazine Master posting.",
         created_by: user.id, control_book_section: product.control_book_section, adjustment_direction: "increase", status: "pending_approval"
