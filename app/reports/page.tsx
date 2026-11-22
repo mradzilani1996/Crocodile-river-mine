@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createClient, User } from "@supabase/supabase-js";
 
 type Row = Record<string, any>;
-type ReportKey = "balances" | "movements" | "daily" | "deliveries" | "incidents" | "inspections";
+type ReportKey = "balances" | "movements" | "daily" | "deliveries" | "incidents" | "inspections" | "product_register" | "product_movements" | "product_approvals" | "product_balances" | "low_stock";
 
 const styles: Record<string, React.CSSProperties> = {
   card: { background: "#fff", border: "1px solid #e4e8ee", borderRadius: 14, padding: 18, marginBottom: 16 },
@@ -22,7 +22,12 @@ const reportLabels: Record<ReportKey, string> = {
   daily: "Daily explosive requests",
   deliveries: "Supplier deliveries",
   incidents: "Incident register",
-  inspections: "Inspection register"
+  inspections: "Inspection register",
+  product_register: "Product register",
+  product_movements: "Product movement history",
+  product_approvals: "Product approval history",
+  product_balances: "Product stock balances",
+  low_stock: "Low-stock products"
 };
 
 export default function ReportsPage() {
@@ -88,6 +93,14 @@ export default function ReportsPage() {
     return () => { alive = false; };
   }, [db]);
 
+  const productRegister = useMemo(() => products.map(p => ({ ...p, created_date: p.created_at, approval_stage: p.approval_status === "pending_shift_boss" ? "Pending Shiftboss" : p.approval_status === "pending_management" ? "Pending Management" : p.approval_status === "approved" ? "Approved" : p.approval_status === "rejected" ? "Rejected" : (p.approval_status || "Not recorded") })), [products]);
+
+  const productMovements = useMemo(() => movements.map(tx => { const p = products.find(x => x.id === tx.product_id); return { ...tx, product_code: p?.product_code, product_name: p?.product_name, product_unit: p?.unit_of_measure }; }), [movements, products]);
+
+  const productApprovals = useMemo(() => products.map(p => ({ product_code: p.product_code, product_name: p.product_name, approval_status: p.approval_status, submitted_by: p.submitted_by || p.created_by, shiftboss_approved_by: p.shiftboss_approved_by, shiftboss_approved_at: p.shiftboss_approved_at, management_approved_by: p.management_approved_by, management_approved_at: p.management_approved_at, approved_by: p.approved_by, approved_at: p.approved_at, approval_notes: p.approval_notes, created_at: p.created_at })), [products]);
+
+  const lowStock = useMemo(() => balances.filter(r => Number(r.minimum || 0) > 0 && Number(r.units || 0) <= Number(r.minimum || 0)), [balances]);
+
   const balances = useMemo(() => {
     const grouped = new Map<string, Row>();
     for (const tx of movements) {
@@ -110,10 +123,11 @@ export default function ReportsPage() {
     return Array.from(grouped.values()).sort((a,b) => String(a.product_name).localeCompare(String(b.product_name)) || String(a.register).localeCompare(String(b.register)));
   }, [movements, products]);
 
-  const source = report === "balances" ? balances : report === "movements" ? movements : report === "daily" ? daily : report === "deliveries" ? deliveries : report === "incidents" ? incidents : inspections;
-  const dateField: Record<ReportKey, string> = { balances: "", movements: "transaction_date", daily: "order_date", deliveries: "received_date", incidents: "incident_date", inspections: "inspection_date" };
+  const source = report === "balances" || report === "product_balances" ? balances : report === "low_stock" ? lowStock : report === "product_register" ? productRegister : report === "product_movements" ? productMovements : report === "product_approvals" ? productApprovals : report === "movements" ? movements : report === "daily" ? daily : report === "deliveries" ? deliveries : report === "incidents" ? incidents : inspections;
+  const dateField: Record<ReportKey, string> = { balances: "", movements: "transaction_date", daily: "order_date", deliveries: "received_date", incidents: "incident_date", inspections: "inspection_date", product_register: "created_at", product_movements: "transaction_date", product_approvals: "created_at", product_balances: "", low_stock: "" };
   const rows = useMemo(() => source.filter(row => {
-    if (report === "balances") return section === "All registers" || row.register === section;
+    if (report === "balances" || report === "product_balances") return section === "All registers" || row.register === section;
+    if (report === "low_stock") return section === "All registers" || row.register === section;
     const raw = row[dateField[report]];
     if (!raw) return true;
     const date = String(raw).slice(0,10);
@@ -126,7 +140,12 @@ export default function ReportsPage() {
     daily: [{key:"order_date",label:"Date"},{key:"shift",label:"Shift"},{key:"work_section",label:"Work area"},{key:"miner_name",label:"Miner"},{key:"miner_company_number",label:"Company number"},{key:"status",label:"Status"}],
     deliveries: [{key:"received_date",label:"Received date"},{key:"supplier_delivery_note",label:"Delivery note"},{key:"order_id",label:"Purchase order"},{key:"received_by_name",label:"Received by"},{key:"notes",label:"Notes"}],
     incidents: [{key:"incident_date",label:"Incident date"},{key:"incident_type",label:"Type"},{key:"severity",label:"Severity"},{key:"location",label:"Location"},{key:"description",label:"Description"},{key:"reporter_name",label:"Reported by"},{key:"status",label:"Status"}],
-    inspections: [{key:"inspection_date",label:"Date"},{key:"inspection_type",label:"Inspection"},{key:"location",label:"Location"},{key:"findings",label:"Findings"},{key:"non_conformances",label:"Non-conformances"},{key:"status",label:"Status"}]
+    inspections: [{key:"inspection_date",label:"Date"},{key:"inspection_type",label:"Inspection"},{key:"location",label:"Location"},{key:"findings",label:"Findings"},{key:"non_conformances",label:"Non-conformances"},{key:"status",label:"Status"}],
+    product_register: [{key:"product_code",label:"Product code"},{key:"product_name",label:"Product name"},{key:"unit_of_measure",label:"Unit"},{key:"control_book_section",label:"Register"},{key:"opening_quantity",label:"Opening quantity"},{key:"minimum_stock",label:"Minimum stock"},{key:"is_active",label:"Active"},{key:"approval_stage",label:"Approval status"},{key:"created_by",label:"Created by (user ID)"},{key:"created_at",label:"Created date"}],
+    product_movements: [{key:"transaction_number",label:"Reference"},{key:"transaction_date",label:"Date"},{key:"product_code",label:"Product code"},{key:"product_name",label:"Product"},{key:"transaction_type",label:"Movement"},{key:"unit_quantity",label:"Units"},{key:"package_quantity",label:"Packages"},{key:"container_number",label:"Container number"},{key:"work_section",label:"Work area"},{key:"miner_name",label:"Issued to"},{key:"miner_company_number",label:"Company number"},{key:"issuer_name",label:"Issuer"},{key:"created_by",label:"Recorded by (user ID)"},{key:"shiftboss_approved_by",label:"Shiftboss approver (user ID)"},{key:"shiftboss_approved_at",label:"Shiftboss approval date"},{key:"approved_by",label:"Management approver (user ID)"},{key:"approved_at",label:"Management approval date"},{key:"posted_at",label:"Posted date"},{key:"status",label:"Status"},{key:"reference_number",label:"Document reference"}],
+    product_approvals: [{key:"product_code",label:"Product code"},{key:"product_name",label:"Product"},{key:"approval_status",label:"Approval status"},{key:"submitted_by",label:"Submitted by (user ID)"},{key:"shiftboss_approved_by",label:"Shiftboss (user ID)"},{key:"shiftboss_approved_at",label:"Shiftboss approval date"},{key:"management_approved_by",label:"Management (user ID)"},{key:"management_approved_at",label:"Management approval date"},{key:"approved_by",label:"Final approver (user ID)"},{key:"approved_at",label:"Final approval date"},{key:"approval_notes",label:"Approval notes"},{key:"created_at",label:"Product created date"}],
+    product_balances: [{key:"product_code",label:"Product code"},{key:"product_name",label:"Product"},{key:"register",label:"Register"},{key:"units",label:"Current balance"},{key:"unit",label:"Unit"},{key:"packages",label:"Packages"},{key:"minimum",label:"Minimum stock"}],
+    low_stock: [{key:"product_code",label:"Product code"},{key:"product_name",label:"Product"},{key:"register",label:"Register"},{key:"units",label:"Current balance"},{key:"unit",label:"Unit"},{key:"minimum",label:"Minimum stock"}]
   };
 
   const cell = (value: any) => value === null || value === undefined || value === "" ? "—" : typeof value === "object" ? JSON.stringify(value) : String(value);
@@ -151,9 +170,9 @@ export default function ReportsPage() {
         {(Object.keys(reportLabels) as ReportKey[]).map(k=><button key={k} onClick={()=>setReport(k)} style={{...styles.secondary,background:report===k?"#173b57":"#fff",color:report===k?"#fff":"#173b57"}}>{reportLabels[k]}</button>)}
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:12}}>
-        <label style={styles.label}>From date<input type="date" style={styles.input} value={fromDate} onChange={e=>setFromDate(e.target.value)} disabled={report==="balances"}/></label>
+        <label style={styles.label}>From date<input type="date" style={styles.input} value={fromDate} onChange={e=>setFromDate(e.target.value)} disabled={report==="balances" || report==="product_balances" || report==="low_stock"}/></label>
         <label style={styles.label}>To date<input type="date" style={styles.input} value={toDate} onChange={e=>setToDate(e.target.value)} disabled={report==="balances"}/></label>
-        <label style={styles.label}>Register<select style={styles.input} value={section} onChange={e=>setSection(e.target.value)} disabled={report!=="balances"}><option>All registers</option><option>Boxes</option><option>Bags</option><option>Tamping</option><option>Unassigned</option></select></label>
+        <label style={styles.label}>Register<select style={styles.input} value={section} onChange={e=>setSection(e.target.value)} disabled={report!=="balances" && report!=="product_balances" && report!=="low_stock"}><option>All registers</option><option>Boxes</option><option>Bags</option><option>Tamping</option><option>Unassigned</option></select></label>
       </div>
     </section>
     <section style={styles.card}>
