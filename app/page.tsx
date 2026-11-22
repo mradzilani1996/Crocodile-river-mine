@@ -43,6 +43,7 @@ export default function Home() {
   const [magazine, setMagazine] = useState<Magazine | null>(null);
   const [magazineName, setMagazineName] = useState("");
   const [responsibleUserId, setResponsibleUserId] = useState("");
+  const [assignedMagazineMasterName, setAssignedMagazineMasterName] = useState("");
   const [profiles, setProfiles] = useState<EMSProfile[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [productCode, setProductCode] = useState("");
@@ -138,6 +139,9 @@ export default function Home() {
     ]);
     let allPostedLedgerRows:LedgerTransaction[]=[];let ledgerOffset=0;let ledgerLoadError:string|null=null;
     while(true){const page=await supabase.from("ems_stock_transactions").select("id,transaction_number,transaction_type,status,product_id,quantity,transaction_date,reference_number,source_or_destination,issued_to,purpose,notes,adjustment_direction,control_book_section,container_number,item_type,item_description,package_quantity,unit_quantity,work_section,miner_company_number,miner_name,miner_acknowledged").eq("status","posted").order("transaction_date",{ascending:true}).order("transaction_number",{ascending:true}).range(ledgerOffset,ledgerOffset+999);if(page.error){ledgerLoadError=page.error.message;break;}const batch=(page.data||[]) as LedgerTransaction[];allPostedLedgerRows=allPostedLedgerRows.concat(batch);if(batch.length<1000)break;ledgerOffset+=1000;}
+    const assignedMasterResult = await supabase.rpc("ems_get_assigned_magazine_master_name");
+    if (assignedMasterResult.error) setAssignedMagazineMasterName("");
+    else setAssignedMagazineMasterName(assignedMasterResult.data || "");
     if (mag.error) setError("Could not load magazine details. Check the database permissions.");
     else if (mag.data) { setMagazine(mag.data as Magazine); setMagazineName(mag.data.magazine_name); setResponsibleUserId(mag.data.responsible_user_id || ""); }
     if (people.data) setProfiles(people.data as EMSProfile[]);
@@ -678,7 +682,7 @@ export default function Home() {
             </section>
           </>}
           {section === "magazine" && <section className="data-card wide-card"><div className="card-heading"><div><h3>Main magazine configuration</h3><p>Maintain the system record and assign the responsible Magazine Master.</p></div><span className="state approved"> {magazine?.is_active ? "Active" : "Inactive"} </span></div>
-            {magazine ? <form className="config-form" onSubmit={saveMagazine}><label>Magazine name<input value={magazineName} onChange={e=>setMagazineName(e.target.value)} disabled={!canManageMagazine}/></label><label>Responsible person<select value={responsibleUserId} onChange={e=>setResponsibleUserId(e.target.value)} disabled={!canManageMagazine}><option value="">Not assigned</option>{activePeople.filter(p=>p.role === "magazine_master").map(p=><option key={p.user_id} value={p.user_id}>{p.full_name} — {p.role === "authorising_officer" ? "Shiftboss" : p.role.replaceAll("_"," ")}</option>)}</select></label><div className="info-note">Only an administrator can change the magazine configuration. The assigned person must have an active EMS profile with the appropriate role.</div>{canManageMagazine && <button className="primary-btn" disabled={busy || !magazineName.trim()}>{busy ? "Saving…" : "Save magazine details"}</button>}{!canManageMagazine && <p className="muted">Your role can view this configuration but cannot edit it.</p>}</form> : <div className="empty-state">The main magazine record was not found. Ask the system administrator to verify the database setup.</div>}
+            {magazine ? <form className="config-form" onSubmit={saveMagazine}><label>Magazine name<input value={magazineName} onChange={e=>setMagazineName(e.target.value)} disabled={!canManageMagazine}/></label>{canManageMagazine ? <label>Responsible person<select value={responsibleUserId} onChange={e=>setResponsibleUserId(e.target.value)}><option value="">Not assigned</option>{activePeople.filter(p=>p.role === "magazine_master").map(p=><option key={p.user_id} value={p.user_id}>{p.full_name} — Magazine Master</option>)}</select></label> : <div className="config-readonly"><span className="field-label">Responsible person</span><strong>{assignedMagazineMasterName || "Assignment could not be loaded"}</strong><small>Assigned Magazine Master</small></div>}<div className="info-note">Only an administrator can change the magazine configuration. The assigned person must have an active EMS profile with the appropriate role.</div>{canManageMagazine && <button className="primary-btn" disabled={busy || !magazineName.trim()}>{busy ? "Saving…" : "Save magazine details"}</button>}{!canManageMagazine && <p className="muted">Your role can view this configuration but cannot edit it.</p>}</form> : <div className="empty-state">The main magazine record was not found. Ask the system administrator to verify the database setup.</div>}
           </section>}
           {section === "people" && <section className="data-card wide-card">
             {profile?.role === "admin" ? <>
