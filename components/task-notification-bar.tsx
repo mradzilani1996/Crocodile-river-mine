@@ -28,9 +28,9 @@ export default function TaskNotificationBar(){
     setNotifications(incoming);
     // A toast is only valid while its notification is still unread.
     // Clear it as soon as it is read/resolved or no longer returned by Supabase.
-    if(toastNotification && !incoming.some(n=>n.id===toastNotification.id)){
-      setToastNotification(null);
-    }
+    setToastNotification(current =>
+      current && !incoming.some(n=>n.id===current.id) ? null : current
+    );
     if(incoming.length>0){
       setExpanded(true);
       if(lastToastId.current!==incoming[0].id){lastToastId.current=incoming[0].id;setToastNotification(incoming[0]);}
