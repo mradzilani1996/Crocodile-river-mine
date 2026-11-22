@@ -176,7 +176,7 @@ export default function Home() {
     return () => listener.subscription.unsubscribe();
   }, [supabase]);
 
-  useEffect(() => { if (user && profile?.role) loadDashboard(); }, [user, profile?.role]);
+  useEffect(() => { if (!user || !profile?.role) return; void loadDashboard(); const refresh = window.setInterval(() => { void loadDashboard(); }, 15000); return () => window.clearInterval(refresh); }, [user, profile?.role]);
 
   async function signIn(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
