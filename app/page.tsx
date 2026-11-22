@@ -27,7 +27,7 @@ export default function Home() {
     const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
     return url && key ? createClient(url, key) : null;
   }, []);
-  const [email, setEmail] = useState("mradzilani@eastplats.co.za");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [user, setUser] = useState<User | null>(null);
@@ -625,9 +625,9 @@ export default function Home() {
             </form>
           ) : (
             <>
-              <form onSubmit={signIn}>
-                <label>Email address</label><input type="email" autoComplete="username" value={email} onChange={e=>setEmail(e.target.value)} required />
-                <label>Password</label><input type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} required />
+              <form onSubmit={signIn} autoComplete="off">
+                <label>Email address</label><input type="email" name="ems-login-email" autoComplete="off" value={email} onChange={e=>setEmail(e.target.value)} required />
+                <label>Password</label><input type="password" name="ems-login-password" autoComplete="new-password" value={password} onChange={e=>setPassword(e.target.value)} required />
                 <button disabled={busy}>{busy ? "Signing in…" : "Sign in securely"}</button>
               </form>
               <p className="muted">Forgot your password? Contact the System Administrator. They can reset it inside Manage Users. No email is required.</p>
