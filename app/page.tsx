@@ -528,6 +528,7 @@ export default function Home() {
     setBusy(false);
   }
 
+  const activePeople = profiles.filter(p => p.is_active);
   const activePeopleCount = activeProfileCount;
   const activeProducts = products.filter(p => p.is_active && p.approval_status === "approved");
   const isAppointedMagazineMaster = profile?.role === "magazine_master" && (magazine?.responsible_user_id === user?.id || isAssignedMagazineMaster);
