@@ -106,6 +106,7 @@ export default function Home() {
   const [inviteRole, setInviteRole] = useState("issuer");
   const [dataLoading, setDataLoading] = useState(false);
   const [authChecking, setAuthChecking] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   async function loadProfile(currentUser: User) {
     if (!supabase) return;
@@ -645,15 +646,16 @@ export default function Home() {
 
   return (
     <main className="app-shell">
-      <aside className="sidebar">
+      <aside className={`sidebar${mobileMenuOpen ? " mobile-menu-open" : ""}`}>
         <div className="side-brand"><EastplatsLogo className="side-logo" /><div><strong>CROCODILE RIVER MINE</strong><span>EXPLOSIVES MANAGEMENT</span></div></div>
+        <button type="button" className="mobile-nav-toggle" aria-expanded={mobileMenuOpen} onClick={() => setMobileMenuOpen(open => !open)}>{mobileMenuOpen ? "✕ Close menu" : "☰ Menu"} <span>{mobileMenuOpen ? "Hide navigation" : "Open navigation"}</span></button>
         <div className="nav-caption">MAIN MENU</div>
         <button className={section === "overview" ? "nav-item active" : "nav-item"} onClick={() => setSection("overview")}>▤ <span>Home</span></button>
         <a className="nav-item" href="/approvals">✓ <span>Approval Centre</span></a>
         {(profile?.role === "magazine_master" || profile?.role === "admin") && <>
           <div className="nav-caption">STOCK & MOVEMENTS</div>
           <a className="nav-item" href="/stock-control">⇄ <span>Record stock movement</span></a>
-          <button className={section === "control-book" ? "nav-item active" : "nav-item"} onClick={() => setSection("control-book")}>▤ <span>Stock register & balances</span></button>
+          <button className={section === "control-book" ? "nav-item active" : "nav-item"} onClick={() => setSection("control-book")}>▤ <span>Stock balances</span></button>
         </>}
         <button className={section === "products" ? "nav-item active" : "nav-item"} onClick={() => setSection("products")}>▤ <span>Product register</span></button>
         {profile?.role !== "magazine_master" && <a className="nav-item" href="/stock-control">⇄ <span>Record movement</span></a>}
@@ -662,7 +664,7 @@ export default function Home() {
         <div className="nav-caption">DAILY MAGAZINE WORK</div>
         <button className={section === "magazine" ? "nav-item active" : "nav-item"} onClick={() => setSection("magazine")}>▣ <span>Magazine setup</span></button>
         <button className={section === "daily-orders" ? "nav-item active" : "nav-item"} onClick={() => setSection("daily-orders")}>▧ <span>Daily requests</span></button>
-        {profile?.role !== "magazine_master" && <button className={section === "control-book" ? "nav-item active" : "nav-item"} onClick={() => setSection("control-book")}>▤ <span>Stock book & balances</span></button>}
+        {profile?.role !== "magazine_master" && <button className={section === "control-book" ? "nav-item active" : "nav-item"} onClick={() => setSection("control-book")}>▤ <span>Stock balances</span></button>}
         <button className={section === "ordering" ? "nav-item active" : "nav-item"} onClick={() => setSection("ordering")}>▧ <span>Supplier orders</span></button>
         <button className={section === "deliveries" ? "nav-item active" : "nav-item"} onClick={() => setSection("deliveries")}>⇩ <span>Receive delivery</span></button>
         <a className="nav-item" href="/reports">▤ <span>Reports</span></a>
@@ -694,7 +696,7 @@ export default function Home() {
               <section className="data-card"><div className="card-heading"><div><h3>Recent stock records</h3><p>Latest recorded movements and their current status.</p></div><button className="text-action" onClick={() => setSection("transactions")}>View records →</button></div>
                 {transactions.length ? <div className="table-wrap"><table><thead><tr><th>REFERENCE</th><th>TYPE</th><th>DATE</th><th>STATUS</th></tr></thead><tbody>{transactions.map(t=><tr key={t.id}><td>EMS-{t.transaction_number}</td><td className="capitalize">{t.transaction_type}</td><td>{new Date(t.transaction_date).toLocaleDateString("en-ZA")}</td><td><span className={"state "+t.status}>{t.status.replaceAll("_"," ")}</span></td></tr>)}</tbody></table></div> : <div className="empty-state">No stock transactions have been recorded yet.</div>}
               </section>
-              <section className="data-card quick-card"><div className="card-heading"><div><h3>System shortcuts</h3><p>Manage core EMS setup.</p></div></div><button onClick={() => setSection("magazine")} className="shortcut">▣ <span><b>Magazine configuration</b><small>View the main magazine and responsible person</small></span> →</button><button onClick={() => setSection("people")} className="shortcut">♙ <span><b>User profiles</b><small>Review assigned roles and account status</small></span> →</button><button onClick={() => setSection("products")} className="shortcut">▤ <span><b>Product register</b><small>View registered product records</small></span> →</button><button onClick={() => setSection("daily-orders")} className="shortcut">▧ <span><b>Daily explosive order</b><small>Submit and track daily requirements</small></span> →</button><button onClick={() => setSection("control-book")} className="shortcut">▤ <span><b>Explosives control book</b><small>Review the posted magazine ledger and balances</small></span> →</button><button onClick={() => setSection("ordering")} className="shortcut">▧ <span><b>Explosives & accessories ordering</b><small>Request, approve and track supplier deliveries</small></span> →</button><a href="/stock-control" className="shortcut">▣ <span><b>Stock management & approvals</b><small>Balances, movement approvals, reports and audit trail</small></span> →</a>
+              <section className="data-card quick-card"><div className="card-heading"><div><h3>System shortcuts</h3><p>Manage core EMS setup.</p></div></div><button onClick={() => setSection("magazine")} className="shortcut">▣ <span><b>Magazine configuration</b><small>View the main magazine and responsible person</small></span> →</button>{profile?.role === "admin" && <button onClick={() => setSection("people")} className="shortcut">♙ <span><b>Manage users</b><small>Review staff roles and account access</small></span> →</button>}<button onClick={() => setSection("products")} className="shortcut">▤ <span><b>Product register</b><small>View registered product records</small></span> →</button><button onClick={() => setSection("daily-orders")} className="shortcut">▧ <span><b>Daily explosive order</b><small>Submit and track daily requirements</small></span> →</button><button onClick={() => setSection("control-book")} className="shortcut">▤ <span><b>Explosives control book</b><small>Review the posted magazine ledger and balances</small></span> →</button><button onClick={() => setSection("ordering")} className="shortcut">▧ <span><b>Explosives & accessories ordering</b><small>Request, approve and track supplier deliveries</small></span> →</button><a href="/stock-control" className="shortcut">▣ <span><b>Stock management & approvals</b><small>Balances, movement approvals, reports and audit trail</small></span> →</a>
                 <a href="/approvals" className="shortcut">✓ <span><b>Approval Centre</b><small>Shiftboss and Management: review all pending requests in one place</small></span> →</a></section>
             </div>
             <section className="data-card wide-card">
