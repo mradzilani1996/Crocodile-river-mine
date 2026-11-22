@@ -69,9 +69,16 @@ export default function ApprovalsPage(){
   if(ok)await recordApproval("daily_order",r.id,isAdmin?"admin":"shift_boss",decision==="approve"?"approved":"rejected",notes[r.id]||"");
  }
  async function decideProduct(r:Row,decision:"approved"|"rejected"){
-  if(!db||!user)return;if(r.submitted_by===user.id&&!isAdmin){setError("You cannot approve a product you submitted yourself.");return;}
+  if(!db||!user)return;
+  if(r.submitted_by===user.id&&!isAdmin){setError("You cannot approve a product you submitted yourself.");return;}
   if(!window.confirm("I confirm that I have reviewed this explosive product submission and personally acknowledge this decision."))return;
-  const ok=await finish(db.from("ems_explosive_products").update({approval_status:decision,approved_by:user.id,approved_at:new Date().toISOString(),approval_notes:notes[r.id]||r.approval_notes||null,is_active:decision==="approved"}).eq("id",r.id).eq("approval_status","pending_approval"),decision==="approved"?"Product approved and activated.":"Product rejected.");
+  const shiftStage=isShift&&r.approval_status==="pending_approval";
+  const nextStatus=decision==="rejected"?"rejected":shiftStage?"pending_management":"approved";
+  const update=shiftStage
+   ?{approval_status:nextStatus,approval_notes:notes[r.id]||r.approval_notes||null}
+   :{approval_status:nextStatus,approved_by:user.id,approved_at:new Date().toISOString(),approval_notes:notes[r.id]||r.approval_notes||null,is_active:decision==="approved"};
+  const ok=await finish(db.from("ems_explosive_products").update(update).eq("id",r.id).eq("approval_status",r.approval_status),
+   shiftStage?"Shiftboss approval recorded. Sent to Management.":decision==="approved"?"Product approved and activated.":"Product rejected.");
   if(ok)await recordApproval("explosive_product",r.id,isAdmin?"admin":isManager?"mine_manager":"shift_boss",decision==="approved"?"approved":"rejected",notes[r.id]||"");
  }
  async function decidePurchase(r:Row,decision:"approve"|"reject"){
