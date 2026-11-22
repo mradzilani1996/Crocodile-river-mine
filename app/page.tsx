@@ -630,14 +630,19 @@ export default function Home() {
         <div className="nav-caption">MAIN MENU</div>
         <button className={section === "overview" ? "nav-item active" : "nav-item"} onClick={() => setSection("overview")}>▤ <span>Home</span></button>
         <a className="nav-item" href="/approvals">✓ <span>Approval Centre</span></a>
+        {(profile?.role === "magazine_master" || profile?.role === "admin") && <>
+          <div className="nav-caption">STOCK & MOVEMENTS</div>
+          <a className="nav-item" href="/stock-control">⇄ <span>Record stock movement</span></a>
+          <button className={section === "control-book" ? "nav-item active" : "nav-item"} onClick={() => setSection("control-book")}>▤ <span>Stock register & balances</span></button>
+        </>}
         <button className={section === "products" ? "nav-item active" : "nav-item"} onClick={() => setSection("products")}>▤ <span>Product register</span></button>
-        <a className="nav-item" href="/stock-control">⇄ <span>Record movement</span></a>
+        {profile?.role !== "magazine_master" && <a className="nav-item" href="/stock-control">⇄ <span>Record movement</span></a>}
         {profile?.role === "admin" && <button className={section === "people" ? "nav-item active" : "nav-item"} onClick={() => setSection("people")}>♙ <span>Manage users</span></button>}
         <a className="nav-item" href="/stock-control?tab=audit">◷ <span>Action history</span></a>
         <div className="nav-caption">DAILY MAGAZINE WORK</div>
         <button className={section === "magazine" ? "nav-item active" : "nav-item"} onClick={() => setSection("magazine")}>▣ <span>Magazine setup</span></button>
         <button className={section === "daily-orders" ? "nav-item active" : "nav-item"} onClick={() => setSection("daily-orders")}>▧ <span>Daily requests</span></button>
-        <button className={section === "control-book" ? "nav-item active" : "nav-item"} onClick={() => setSection("control-book")}>▤ <span>Stock book & balances</span></button>
+        {profile?.role !== "magazine_master" && <button className={section === "control-book" ? "nav-item active" : "nav-item"} onClick={() => setSection("control-book")}>▤ <span>Stock book & balances</span></button>}
         <button className={section === "ordering" ? "nav-item active" : "nav-item"} onClick={() => setSection("ordering")}>▧ <span>Supplier orders</span></button>
         <button className={section === "deliveries" ? "nav-item active" : "nav-item"} onClick={() => setSection("deliveries")}>⇩ <span>Receive delivery</span></button>
         <a className="nav-item" href="/reports">▤ <span>Reports</span></a>
