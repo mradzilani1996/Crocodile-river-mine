@@ -18,8 +18,8 @@ export default function ApprovalsPage(){
  const [notes,setNotes]=useState<Record<string,string>>({}),[quantities,setQuantities]=useState<Record<string,string>>({});
  const [busy,setBusy]=useState(false),[loading,setLoading]=useState(true),[error,setError]=useState(""),[notice,setNotice]=useState("");
  const role=profile?.role||"", isAdmin=role==="admin", isShift=role==="authorising_officer", isManager=role==="management";
- async function load(){
-  if(!db)return;setLoading(true);setError("");
+ async function load(silent=false){
+  if(!db)return;if(!silent)setLoading(true);setError("");
   const results=await Promise.all([
    db.from("ems_stock_transactions").select("id,transaction_number,transaction_type,status,product_id,quantity,unit_quantity,package_quantity,transaction_date,reference_number,created_by,purpose,notes,control_book_section,approval_comments,ems_explosive_products(product_name,unit_of_measure)").in("status",["pending_approval","shiftboss_approved"]).order("created_at",{ascending:true}),
    db.from("ems_daily_orders").select("*").eq("status","submitted").order("created_at",{ascending:true}),
@@ -37,6 +37,7 @@ export default function ApprovalsPage(){
   setLoading(false);
  }
  useEffect(()=>{if(!db)return;db.auth.getSession().then(async({data})=>{const u=data.session?.user||null;setUser(u);if(u){const {data:p,error:e}=await db.from("ems_profiles").select("full_name,role,is_active").eq("user_id",u.id).maybeSingle();if(e)setError(e.message);else if(p?.is_active){setProfile(p);await load();}}else setLoading(false);});},[db]);
+ useEffect(()=>{if(!user||!profile)return;const timer=window.setInterval(()=>{void load(true);},15000);return()=>window.clearInterval(timer);},[user,profile?.role]);
  const counts={
   stock:movements.filter(r=>(isShift||isAdmin)&&r.status==="pending_approval" || (isManager||isAdmin)&&r.status==="shiftboss_approved").length,
   daily:(isShift||isAdmin)?daily.length:0,
