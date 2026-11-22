@@ -17,18 +17,11 @@ const styles: Record<string, React.CSSProperties> = {
 
 const today = new Date().toLocaleDateString("en-CA");
 const reportLabels: Record<ReportKey, string> = {
-  balances: "Current stock balances",
-  movements: "Stock movement register",
-  daily: "Daily explosive requests",
-  deliveries: "Supplier deliveries",
-  incidents: "Incident register",
-  inspections: "Inspection register",
-  product_register: "Product register",
-  product_movements: "Product movement history",
-  product_approvals: "Product approval history",
-  product_balances: "Product stock balances",
-  low_stock: "Low-stock products",
-  product_audit: "Product audit trail"
+  balances: "Current stock balances", movements: "Stock movement register", daily: "Daily explosive requests",
+  deliveries: "Supplier deliveries", incidents: "Incident register", inspections: "Inspection register",
+  product_register: "Product register", product_movements: "Product movement history",
+  product_approvals: "Product approval history", product_balances: "Product stock balances",
+  low_stock: "Low-stock products", product_audit: "Product audit trail"
 };
 
 export default function ReportsPage() {
@@ -76,17 +69,14 @@ export default function ReportsPage() {
       };
       try {
         const [p, d, dl, de, i, ins, audit] = await Promise.all([
-          fetchAll("ems_explosive_products", "product_name", true),
-          fetchAll("ems_stock_transactions", "transaction_date", true),
-          fetchAll("ems_daily_orders", "order_date"),
-          fetchAll("ems_purchase_deliveries", "received_date"),
-          fetchAll("ems_incidents", "incident_date"),
-          fetchAll("ems_inspections", "inspection_date"),
+          fetchAll("ems_explosive_products", "product_name", true), fetchAll("ems_stock_transactions", "transaction_date", true),
+          fetchAll("ems_daily_orders", "order_date"), fetchAll("ems_purchase_deliveries", "received_date"),
+          fetchAll("ems_incidents", "incident_date"), fetchAll("ems_inspections", "inspection_date"),
           fetchAll("ems_audit_log", "occurred_at").catch(() => [])
         ]);
         if (!alive) return;
-        setProducts(p); setMovements(d); setDaily(dl);
-        setDeliveries(de); setIncidents(i); setInspections(ins); setProductAudit(audit.filter((a: Row) => a.table_name === "ems_explosive_products"));
+        setProducts(p); setMovements(d); setDaily(dl); setDeliveries(de); setIncidents(i); setInspections(ins);
+        setProductAudit(audit.filter((a: Row) => a.table_name === "ems_explosive_products"));
       } catch (loadError: any) {
         if (alive) setError("Some reports could not be loaded: " + (loadError?.message || "Unknown error"));
       }
@@ -97,9 +87,7 @@ export default function ReportsPage() {
   }, [db]);
 
   const productRegister = useMemo(() => products.map(p => ({ ...p, created_date: p.created_at, approval_stage: p.approval_status === "pending_shift_boss" ? "Pending Shiftboss" : p.approval_status === "pending_management" ? "Pending Management" : p.approval_status === "approved" ? "Approved" : p.approval_status === "rejected" ? "Rejected" : (p.approval_status || "Not recorded") })), [products]);
-
   const productMovements = useMemo(() => movements.map(tx => { const p = products.find(x => x.id === tx.product_id); return { ...tx, product_code: p?.product_code, product_name: p?.product_name, product_unit: p?.unit_of_measure }; }), [movements, products]);
-
   const productApprovals = useMemo(() => products.map(p => ({ product_code: p.product_code, product_name: p.product_name, approval_status: p.approval_status, submitted_by: p.submitted_by || p.created_by, shiftboss_approved_by: p.shiftboss_approved_by, shiftboss_approved_at: p.shiftboss_approved_at, management_approved_by: p.management_approved_by, management_approved_at: p.management_approved_at, approved_by: p.approved_by, approved_at: p.approved_at, approval_notes: p.approval_notes, created_at: p.created_at })), [products]);
 
   const balances = useMemo(() => {
@@ -123,14 +111,11 @@ export default function ReportsPage() {
     }
     return Array.from(grouped.values()).sort((a,b) => String(a.product_name).localeCompare(String(b.product_name)) || String(a.register).localeCompare(String(b.register)));
   }, [movements, products]);
-
   const lowStock = useMemo(() => balances.filter(r => Number(r.minimum || 0) > 0 && Number(r.units || 0) <= Number(r.minimum || 0)), [balances]);
-
-  const source = report === "balances" || report === "product_balances" ? balances : report === "low_stock" ? lowStock : report === "product_register" ? productRegister : report === "product_movements" ? productMovements : report === "product_approvals" ? productApprovals : report === "product_audit" ? productAudit : report === "movements" ? movements : report === "daily" ? daily : report === "deliveries" ? deliveries : report === "incidents" ? incidents : inspections;
+  const source: Row[] = report === "balances" || report === "product_balances" ? balances : report === "low_stock" ? lowStock : report === "product_register" ? productRegister : report === "product_movements" ? productMovements : report === "product_approvals" ? productApprovals : report === "product_audit" ? productAudit : report === "movements" ? movements : report === "daily" ? daily : report === "deliveries" ? deliveries : report === "incidents" ? incidents : inspections;
   const dateField: Record<ReportKey, string> = { balances: "", movements: "transaction_date", daily: "order_date", deliveries: "received_date", incidents: "incident_date", inspections: "inspection_date", product_register: "created_at", product_movements: "transaction_date", product_approvals: "created_at", product_balances: "", low_stock: "", product_audit: "occurred_at" };
-  const rows = useMemo(() => source.filter(row => {
-    if (report === "balances" || report === "product_balances") return section === "All registers" || row.register === section;
-    if (report === "low_stock") return section === "All registers" || row.register === section;
+  const rows: Row[] = useMemo(() => (source as Row[]).filter((row: Row) => {
+    if (report === "balances" || report === "product_balances" || report === "low_stock") return section === "All registers" || row.register === section;
     const raw = row[dateField[report]];
     if (!raw) return true;
     const date = String(raw).slice(0,10);
@@ -175,7 +160,7 @@ export default function ReportsPage() {
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:12}}>
         <label style={styles.label}>From date<input type="date" style={styles.input} value={fromDate} onChange={e=>setFromDate(e.target.value)} disabled={report==="balances" || report==="product_balances" || report==="low_stock"}/></label>
-        <label style={styles.label}>To date<input type="date" style={styles.input} value={toDate} onChange={e=>setToDate(e.target.value)} disabled={report==="balances"}/></label>
+        <label style={styles.label}>To date<input type="date" style={styles.input} value={toDate} onChange={e=>setToDate(e.target.value)} disabled={report==="balances" || report==="product_balances" || report==="low_stock"}/></label>
         <label style={styles.label}>Register<select style={styles.input} value={section} onChange={e=>setSection(e.target.value)} disabled={report!=="balances" && report!=="product_balances" && report!=="low_stock"}><option>All registers</option><option>Boxes</option><option>Bags</option><option>Tamping</option><option>Unassigned</option></select></label>
       </div>
     </section>
