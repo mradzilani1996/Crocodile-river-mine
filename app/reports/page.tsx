@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createClient, User } from "@supabase/supabase-js";
 
 type Row = Record<string, any>;
-type ReportKey = "balances" | "movements" | "daily" | "deliveries" | "incidents" | "inspections" | "product_register" | "product_movements" | "product_approvals" | "product_balances" | "low_stock" | "product_audit" | "acknowledgements";
+type ReportKey = "balances" | "movements" | "daily" | "deliveries" | "incidents" | "inspections" | "product_register" | "product_movements" | "product_approvals" | "product_balances" | "low_stock" | "product_audit" | "acknowledgements" | "system_audit";
 
 const styles: Record<string, React.CSSProperties> = {
   card: { background: "#fff", border: "1px solid #e4e8ee", borderRadius: 14, padding: 18, marginBottom: 16 },
@@ -21,7 +21,7 @@ const reportLabels: Record<ReportKey, string> = {
   deliveries: "Supplier deliveries", incidents: "Incident register", inspections: "Inspection register",
   product_register: "Product register", product_movements: "Product movement history",
   product_approvals: "Product approval history", product_balances: "Product stock balances",
-  low_stock: "Low-stock products", product_audit: "Product audit trail", acknowledgements: "Approval acknowledgement register"
+  low_stock: "Low-stock products", product_audit: "Product audit trail", acknowledgements: "Approval acknowledgement register", system_audit: "System audit trail"
 };
 
 export default function ReportsPage() {
@@ -39,6 +39,7 @@ export default function ReportsPage() {
   const [incidents, setIncidents] = useState<Row[]>([]);
   const [inspections, setInspections] = useState<Row[]>([]);
   const [productAudit, setProductAudit] = useState<Row[]>([]);
+  const [systemAudit, setSystemAudit] = useState<Row[]>([]);
   const [acknowledgements, setAcknowledgements] = useState<Row[]>([]);
   const [profileDirectory, setProfileDirectory] = useState<Row[]>([]);
   const [fromDate, setFromDate] = useState("");
@@ -81,6 +82,7 @@ export default function ReportsPage() {
         if (!alive) return;
         setProducts(p); setMovements(d); setDaily(dl); setDeliveries(de); setIncidents(i); setInspections(ins);
         setProductAudit(audit.filter((a: Row) => a.table_name === "ems_explosive_products"));
+        setSystemAudit(audit);
         setAcknowledgements(ack);
         if (directoryResult.error) console.warn("Employee name directory unavailable:", directoryResult.error.message);
         setProfileDirectory(directoryResult.data || []);
@@ -122,8 +124,8 @@ export default function ReportsPage() {
     return Array.from(grouped.values()).sort((a,b) => String(a.product_name).localeCompare(String(b.product_name)) || String(a.register).localeCompare(String(b.register)));
   }, [movements, products]);
   const lowStock = useMemo(() => balances.filter(r => Number(r.minimum || 0) > 0 && Number(r.units || 0) <= Number(r.minimum || 0)), [balances]);
-  const source: Row[] = report === "balances" || report === "product_balances" ? balances : report === "low_stock" ? lowStock : report === "product_register" ? productRegister : report === "product_movements" ? productMovements : report === "product_approvals" ? productApprovals : report === "product_audit" ? productAudit : report === "acknowledgements" ? acknowledgements : report === "movements" ? movementReport : report === "daily" ? daily : report === "deliveries" ? deliveries : report === "incidents" ? incidents : inspections;
-  const dateField: Record<ReportKey, string> = { balances: "", movements: "transaction_date", daily: "order_date", deliveries: "received_date", incidents: "incident_date", inspections: "inspection_date", product_register: "created_at", product_movements: "transaction_date", product_approvals: "created_at", product_balances: "", low_stock: "", product_audit: "occurred_at", acknowledgements: "acknowledged_at" };
+  const source: Row[] = report === "balances" || report === "product_balances" ? balances : report === "low_stock" ? lowStock : report === "product_register" ? productRegister : report === "product_movements" ? productMovements : report === "product_approvals" ? productApprovals : report === "product_audit" ? productAudit : report === "acknowledgements" ? acknowledgements : report === "system_audit" ? systemAudit : report === "movements" ? movementReport : report === "daily" ? daily : report === "deliveries" ? deliveries : report === "incidents" ? incidents : inspections;
+  const dateField: Record<ReportKey, string> = { balances: "", movements: "transaction_date", daily: "order_date", deliveries: "received_date", incidents: "incident_date", inspections: "inspection_date", product_register: "created_at", product_movements: "transaction_date", product_approvals: "created_at", product_balances: "", low_stock: "", product_audit: "occurred_at", acknowledgements: "acknowledged_at", system_audit: "occurred_at" };
   const rows: Row[] = useMemo(() => (source as Row[]).filter((row: Row) => {
     if (report === "balances" || report === "product_balances" || report === "low_stock") return section === "All registers" || row.register === section;
     const raw = row[dateField[report]];
@@ -145,7 +147,7 @@ export default function ReportsPage() {
     product_balances: [{key:"product_code",label:"Product code"},{key:"product_name",label:"Product"},{key:"register",label:"Register"},{key:"units",label:"Current balance"},{key:"unit",label:"Unit"},{key:"packages",label:"Packages"},{key:"minimum",label:"Minimum stock"}],
     low_stock: [{key:"product_code",label:"Product code"},{key:"product_name",label:"Product"},{key:"register",label:"Register"},{key:"units",label:"Current balance"},{key:"unit",label:"Unit"},{key:"minimum",label:"Minimum stock"}],
     product_audit: [{key:"occurred_at",label:"Date and time"},{key:"actor_name",label:"User"},{key:"action",label:"Action"},{key:"record_id",label:"Product record ID"},{key:"old_data",label:"Previous product data"},{key:"new_data",label:"Updated product data"}],
-    acknowledgements: [{key:"acknowledged_at",label:"Acknowledged at"},{key:"entity_type",label:"Record type"},{key:"entity_id",label:"Record ID"},{key:"approval_stage",label:"Approval stage"},{key:"decision",label:"Decision"},{key:"actor_name",label:"Employee"},{key:"actor_role",label:"Role"},{key:"acknowledgement_text",label:"Acknowledgement"},{key:"signature_method",label:"Signature method"},{key:"comments",label:"Comments"}]
+    acknowledgements: [{key:"acknowledged_at",label:"Acknowledged at"},{key:"entity_type",label:"Record type"},{key:"entity_id",label:"Record ID"},{key:"approval_stage",label:"Approval stage"},{key:"decision",label:"Decision"},{key:"actor_name",label:"Employee"},{key:"actor_role",label:"Role"},{key:"acknowledgement_text",label:"Acknowledgement"},{key:"signature_method",label:"Signature method"},{key:"comments",label:"Comments"}],\n    system_audit: [{key:"occurred_at",label:"Date and time"},{key:"actor_name",label:"Employee"},{key:"actor_user_id",label:"Actor ID"},{key:"action",label:"Action"},{key:"table_name",label:"Affected register"},{key:"record_id",label:"Record ID"},{key:"old_data",label:"Previous data"},{key:"new_data",label:"New data"}]
   };
 
   const cell = (value: any) => value === null || value === undefined || value === "" ? "—" : typeof value === "object" ? JSON.stringify(value) : String(value);
