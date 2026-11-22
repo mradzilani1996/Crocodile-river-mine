@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createClient, User } from "@supabase/supabase-js";
 
 type Row = Record<string, any>;
-type ReportKey = "balances" | "movements" | "daily" | "deliveries" | "incidents" | "inspections" | "product_register" | "product_movements" | "product_approvals" | "product_balances" | "low_stock" | "product_audit";
+type ReportKey = "balances" | "movements" | "daily" | "deliveries" | "incidents" | "inspections" | "product_register" | "product_movements" | "product_approvals" | "product_balances" | "low_stock" | "product_audit" | "acknowledgements";
 
 const styles: Record<string, React.CSSProperties> = {
   card: { background: "#fff", border: "1px solid #e4e8ee", borderRadius: 14, padding: 18, marginBottom: 16 },
@@ -21,7 +21,7 @@ const reportLabels: Record<ReportKey, string> = {
   deliveries: "Supplier deliveries", incidents: "Incident register", inspections: "Inspection register",
   product_register: "Product register", product_movements: "Product movement history",
   product_approvals: "Product approval history", product_balances: "Product stock balances",
-  low_stock: "Low-stock products", product_audit: "Product audit trail"
+  low_stock: "Low-stock products", product_audit: "Product audit trail", acknowledgements: "Approval acknowledgement register"
 };
 
 export default function ReportsPage() {
@@ -39,6 +39,8 @@ export default function ReportsPage() {
   const [incidents, setIncidents] = useState<Row[]>([]);
   const [inspections, setInspections] = useState<Row[]>([]);
   const [productAudit, setProductAudit] = useState<Row[]>([]);
+  const [acknowledgements, setAcknowledgements] = useState<Row[]>([]);
+  const [profileDirectory, setProfileDirectory] = useState<Row[]>([]);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState(today);
   const [section, setSection] = useState("All registers");
@@ -68,15 +70,20 @@ export default function ReportsPage() {
         return all;
       };
       try {
-        const [p, d, dl, de, i, ins, audit] = await Promise.all([
+        const [p, d, dl, de, i, ins, audit, ack, directoryResult] = await Promise.all([
           fetchAll("ems_explosive_products", "product_name", true), fetchAll("ems_stock_transactions", "transaction_date", true),
           fetchAll("ems_daily_orders", "order_date"), fetchAll("ems_purchase_deliveries", "received_date"),
           fetchAll("ems_incidents", "incident_date"), fetchAll("ems_inspections", "inspection_date"),
-          fetchAll("ems_audit_log", "occurred_at").catch(() => [])
+          fetchAll("ems_audit_log", "occurred_at").catch(() => []),
+          fetchAll("ems_approval_acknowledgements", "acknowledged_at").catch(() => []),
+          db.rpc("ems_get_profile_directory")
         ]);
         if (!alive) return;
         setProducts(p); setMovements(d); setDaily(dl); setDeliveries(de); setIncidents(i); setInspections(ins);
         setProductAudit(audit.filter((a: Row) => a.table_name === "ems_explosive_products"));
+        setAcknowledgements(ack);
+        if (directoryResult.error) console.warn("Employee name directory unavailable:", directoryResult.error.message);
+        setProfileDirectory(directoryResult.data || []);
       } catch (loadError: any) {
         if (alive) setError("Some reports could not be loaded: " + (loadError?.message || "Unknown error"));
       }
@@ -86,9 +93,12 @@ export default function ReportsPage() {
     return () => { alive = false; };
   }, [db]);
 
-  const productRegister = useMemo(() => products.map(p => ({ ...p, created_date: p.created_at, approval_stage: p.approval_status === "pending_shift_boss" ? "Pending Shiftboss" : p.approval_status === "pending_management" ? "Pending Management" : p.approval_status === "approved" ? "Approved" : p.approval_status === "rejected" ? "Rejected" : (p.approval_status || "Not recorded") })), [products]);
-  const productMovements = useMemo(() => movements.map(tx => { const p = products.find(x => x.id === tx.product_id); return { ...tx, product_code: p?.product_code, product_name: p?.product_name, product_unit: p?.unit_of_measure }; }), [movements, products]);
-  const productApprovals = useMemo(() => products.map(p => ({ product_code: p.product_code, product_name: p.product_name, approval_status: p.approval_status, submitted_by: p.submitted_by || p.created_by, shiftboss_approved_by: p.shiftboss_approved_by, shiftboss_approved_at: p.shiftboss_approved_at, management_approved_by: p.management_approved_by, management_approved_at: p.management_approved_at, approved_by: p.approved_by, approved_at: p.approved_at, approval_notes: p.approval_notes, created_at: p.created_at })), [products]);
+  const employeeName = (id: string | null | undefined) => id ? (profileDirectory.find(p => p.user_id === id)?.full_name || "Name unavailable") : "—";
+  const employeeRole = (id: string | null | undefined) => id ? (profileDirectory.find(p => p.user_id === id)?.role || "Role unavailable") : "—";
+  const productRegister = useMemo(() => products.map(p => ({ ...p, created_by_name: employeeName(p.created_by), created_date: p.created_at, approval_stage: p.approval_status === "pending_shift_boss" ? "Pending Shiftboss" : p.approval_status === "pending_management" ? "Pending Management" : p.approval_status === "approved" ? "Approved" : p.approval_status === "rejected" ? "Rejected" : (p.approval_status || "Not recorded") })), [products, profileDirectory]);
+  const productMovements = useMemo(() => movements.map(tx => { const p = products.find(x => x.id === tx.product_id); return { ...tx, product_code: p?.product_code, product_name: p?.product_name, product_unit: p?.unit_of_measure, created_by_name: employeeName(tx.created_by), shiftboss_approved_name: employeeName(tx.shiftboss_approved_by), management_approved_name: employeeName(tx.approved_by), created_by_role: employeeRole(tx.created_by) }; }), [movements, products, profileDirectory]);
+  const movementReport = useMemo(() => movements.map(tx => ({ ...tx, created_by_name: employeeName(tx.created_by), approved_by_name: employeeName(tx.approved_by), posted_by_name: employeeName(tx.posted_by) })), [movements, profileDirectory]);
+  const productApprovals = useMemo(() => products.map(p => ({ product_code: p.product_code, product_name: p.product_name, approval_status: p.approval_status, submitted_by: employeeName(p.submitted_by || p.created_by), shiftboss_approved_by: employeeName(p.shiftboss_approved_by), shiftboss_approved_at: p.shiftboss_approved_at, management_approved_by: employeeName(p.management_approved_by), management_approved_at: p.management_approved_at, approved_by: employeeName(p.approved_by), approved_at: p.approved_at, approval_notes: p.approval_notes, created_at: p.created_at })), [products, profileDirectory]);
 
   const balances = useMemo(() => {
     const grouped = new Map<string, Row>();
@@ -112,8 +122,8 @@ export default function ReportsPage() {
     return Array.from(grouped.values()).sort((a,b) => String(a.product_name).localeCompare(String(b.product_name)) || String(a.register).localeCompare(String(b.register)));
   }, [movements, products]);
   const lowStock = useMemo(() => balances.filter(r => Number(r.minimum || 0) > 0 && Number(r.units || 0) <= Number(r.minimum || 0)), [balances]);
-  const source: Row[] = report === "balances" || report === "product_balances" ? balances : report === "low_stock" ? lowStock : report === "product_register" ? productRegister : report === "product_movements" ? productMovements : report === "product_approvals" ? productApprovals : report === "product_audit" ? productAudit : report === "movements" ? movements : report === "daily" ? daily : report === "deliveries" ? deliveries : report === "incidents" ? incidents : inspections;
-  const dateField: Record<ReportKey, string> = { balances: "", movements: "transaction_date", daily: "order_date", deliveries: "received_date", incidents: "incident_date", inspections: "inspection_date", product_register: "created_at", product_movements: "transaction_date", product_approvals: "created_at", product_balances: "", low_stock: "", product_audit: "occurred_at" };
+  const source: Row[] = report === "balances" || report === "product_balances" ? balances : report === "low_stock" ? lowStock : report === "product_register" ? productRegister : report === "product_movements" ? productMovements : report === "product_approvals" ? productApprovals : report === "product_audit" ? productAudit : report === "acknowledgements" ? acknowledgements : report === "movements" ? movementReport : report === "daily" ? daily : report === "deliveries" ? deliveries : report === "incidents" ? incidents : inspections;
+  const dateField: Record<ReportKey, string> = { balances: "", movements: "transaction_date", daily: "order_date", deliveries: "received_date", incidents: "incident_date", inspections: "inspection_date", product_register: "created_at", product_movements: "transaction_date", product_approvals: "created_at", product_balances: "", low_stock: "", product_audit: "occurred_at", acknowledgements: "acknowledged_at" };
   const rows: Row[] = useMemo(() => (source as Row[]).filter((row: Row) => {
     if (report === "balances" || report === "product_balances" || report === "low_stock") return section === "All registers" || row.register === section;
     const raw = row[dateField[report]];
@@ -124,17 +134,18 @@ export default function ReportsPage() {
 
   const columns: Record<ReportKey, { key: string; label: string }[]> = {
     balances: [{key:"product_code",label:"Product code"},{key:"product_name",label:"Product"},{key:"register",label:"Register"},{key:"units",label:"Balance"},{key:"unit",label:"Unit"},{key:"packages",label:"Packages"},{key:"minimum",label:"Minimum stock"}],
-    movements: [{key:"transaction_number",label:"Reference"},{key:"transaction_date",label:"Date"},{key:"transaction_type",label:"Movement"},{key:"product_id",label:"Product ID"},{key:"control_book_section",label:"Register"},{key:"unit_quantity",label:"Units"},{key:"package_quantity",label:"Packages"},{key:"status",label:"Status"},{key:"reference_number",label:"Document reference"}],
+    movements: [{key:"transaction_number",label:"Reference"},{key:"transaction_date",label:"Date"},{key:"transaction_type",label:"Movement"},{key:"product_id",label:"Product ID"},{key:"control_book_section",label:"Register"},{key:"unit_quantity",label:"Units"},{key:"package_quantity",label:"Packages"},{key:"created_by_name",label:"Recorded by"},{key:"approved_by_name",label:"Approved by"},{key:"posted_by_name",label:"Posted by"},{key:"status",label:"Status"},{key:"reference_number",label:"Document reference"}],
     daily: [{key:"order_date",label:"Date"},{key:"shift",label:"Shift"},{key:"work_section",label:"Work area"},{key:"miner_name",label:"Miner"},{key:"miner_company_number",label:"Company number"},{key:"status",label:"Status"}],
     deliveries: [{key:"received_date",label:"Received date"},{key:"supplier_delivery_note",label:"Delivery note"},{key:"order_id",label:"Purchase order"},{key:"received_by_name",label:"Received by"},{key:"notes",label:"Notes"}],
     incidents: [{key:"incident_date",label:"Incident date"},{key:"incident_type",label:"Type"},{key:"severity",label:"Severity"},{key:"location",label:"Location"},{key:"description",label:"Description"},{key:"reporter_name",label:"Reported by"},{key:"status",label:"Status"}],
     inspections: [{key:"inspection_date",label:"Date"},{key:"inspection_type",label:"Inspection"},{key:"location",label:"Location"},{key:"findings",label:"Findings"},{key:"non_conformances",label:"Non-conformances"},{key:"status",label:"Status"}],
-    product_register: [{key:"product_code",label:"Product code"},{key:"product_name",label:"Product name"},{key:"unit_of_measure",label:"Unit"},{key:"control_book_section",label:"Register"},{key:"opening_quantity",label:"Opening quantity"},{key:"minimum_stock",label:"Minimum stock"},{key:"is_active",label:"Active"},{key:"approval_stage",label:"Approval status"},{key:"created_by",label:"Created by (user ID)"},{key:"created_at",label:"Created date"}],
-    product_movements: [{key:"transaction_number",label:"Reference"},{key:"transaction_date",label:"Date"},{key:"product_code",label:"Product code"},{key:"product_name",label:"Product"},{key:"transaction_type",label:"Movement"},{key:"unit_quantity",label:"Units"},{key:"package_quantity",label:"Packages"},{key:"container_number",label:"Container number"},{key:"work_section",label:"Work area"},{key:"miner_name",label:"Issued to"},{key:"miner_company_number",label:"Company number"},{key:"issuer_name",label:"Issuer"},{key:"created_by",label:"Recorded by (user ID)"},{key:"shiftboss_approved_by",label:"Shiftboss approver (user ID)"},{key:"shiftboss_approved_at",label:"Shiftboss approval date"},{key:"approved_by",label:"Management approver (user ID)"},{key:"approved_at",label:"Management approval date"},{key:"posted_at",label:"Posted date"},{key:"status",label:"Status"},{key:"reference_number",label:"Document reference"}],
-    product_approvals: [{key:"product_code",label:"Product code"},{key:"product_name",label:"Product"},{key:"approval_status",label:"Approval status"},{key:"submitted_by",label:"Submitted by (user ID)"},{key:"shiftboss_approved_by",label:"Shiftboss (user ID)"},{key:"shiftboss_approved_at",label:"Shiftboss approval date"},{key:"management_approved_by",label:"Management (user ID)"},{key:"management_approved_at",label:"Management approval date"},{key:"approved_by",label:"Final approver (user ID)"},{key:"approved_at",label:"Final approval date"},{key:"approval_notes",label:"Approval notes"},{key:"created_at",label:"Product created date"}],
+    product_register: [{key:"product_code",label:"Product code"},{key:"product_name",label:"Product name"},{key:"unit_of_measure",label:"Unit"},{key:"control_book_section",label:"Register"},{key:"opening_quantity",label:"Opening quantity"},{key:"minimum_stock",label:"Minimum stock"},{key:"is_active",label:"Active"},{key:"approval_stage",label:"Approval status"},{key:"created_by_name",label:"Created by"},{key:"created_at",label:"Created date"}],
+    product_movements: [{key:"transaction_number",label:"Reference"},{key:"transaction_date",label:"Date"},{key:"product_code",label:"Product code"},{key:"product_name",label:"Product"},{key:"transaction_type",label:"Movement"},{key:"unit_quantity",label:"Units"},{key:"package_quantity",label:"Packages"},{key:"container_number",label:"Container number"},{key:"work_section",label:"Work area"},{key:"miner_name",label:"Issued to"},{key:"miner_company_number",label:"Company number"},{key:"issuer_name",label:"Issuer"},{key:"created_by_name",label:"Recorded by"},{key:"created_by_role",label:"Recorder role"},{key:"shiftboss_approved_name",label:"Shiftboss approver"},{key:"shiftboss_approved_at",label:"Shiftboss approval date"},{key:"management_approved_name",label:"Management approver"},{key:"approved_at",label:"Management approval date"},{key:"posted_at",label:"Posted date"},{key:"status",label:"Status"},{key:"reference_number",label:"Document reference"}],
+    product_approvals: [{key:"product_code",label:"Product code"},{key:"product_name",label:"Product"},{key:"approval_status",label:"Approval status"},{key:"submitted_by",label:"Submitted by"},{key:"shiftboss_approved_by",label:"Shiftboss"},{key:"shiftboss_approved_at",label:"Shiftboss approval date"},{key:"management_approved_by",label:"Management"},{key:"management_approved_at",label:"Management approval date"},{key:"approved_by",label:"Final approver"},{key:"approved_at",label:"Final approval date"},{key:"approval_notes",label:"Approval notes"},{key:"created_at",label:"Product created date"}],
     product_balances: [{key:"product_code",label:"Product code"},{key:"product_name",label:"Product"},{key:"register",label:"Register"},{key:"units",label:"Current balance"},{key:"unit",label:"Unit"},{key:"packages",label:"Packages"},{key:"minimum",label:"Minimum stock"}],
     low_stock: [{key:"product_code",label:"Product code"},{key:"product_name",label:"Product"},{key:"register",label:"Register"},{key:"units",label:"Current balance"},{key:"unit",label:"Unit"},{key:"minimum",label:"Minimum stock"}],
-    product_audit: [{key:"occurred_at",label:"Date and time"},{key:"actor_name",label:"User"},{key:"action",label:"Action"},{key:"record_id",label:"Product record ID"},{key:"old_data",label:"Previous product data"},{key:"new_data",label:"Updated product data"}]
+    product_audit: [{key:"occurred_at",label:"Date and time"},{key:"actor_name",label:"User"},{key:"action",label:"Action"},{key:"record_id",label:"Product record ID"},{key:"old_data",label:"Previous product data"},{key:"new_data",label:"Updated product data"}],
+    acknowledgements: [{key:"acknowledged_at",label:"Acknowledged at"},{key:"entity_type",label:"Record type"},{key:"entity_id",label:"Record ID"},{key:"approval_stage",label:"Approval stage"},{key:"decision",label:"Decision"},{key:"actor_name",label:"Employee"},{key:"actor_role",label:"Role"},{key:"acknowledgement_text",label:"Acknowledgement"},{key:"signature_method",label:"Signature method"},{key:"comments",label:"Comments"}]
   };
 
   const cell = (value: any) => value === null || value === undefined || value === "" ? "—" : typeof value === "object" ? JSON.stringify(value) : String(value);
