@@ -24,20 +24,22 @@ export default function TaskNotificationBar(){
     if(!profile?.is_active){setTasks([]);setNotifications([]);return;}
     const {data:noticeRows,error:noticeError}=await db.from("ems_user_notifications").select("id,title,message,href,created_at").eq("recipient_user_id",user.id).is("read_at",null).order("created_at",{ascending:false}).limit(10);
     if(noticeError){setNotificationError("Notifications could not be loaded: "+noticeError.message);}else{setNotificationError("");}
-    const incoming=(noticeRows||[]) as UserNotification[];
+    const role=profile.role||"";
+    // Product master-data approvals belong to Management/Admin, not Shiftboss.
+    // Older queued notifications for the wrong role must not keep resurfacing.
+    const incoming=((noticeRows||[]) as UserNotification[]).filter(n=>!(role==="authorising_officer" && /product.*awaiting approval|new explosive product/i.test(`${n.title} ${n.message}`)));
     setNotifications(incoming);
     if(incoming.length>0){
       setExpanded(true);
       if(lastToastId.current!==incoming[0].id){lastToastId.current=incoming[0].id;setToastNotification(incoming[0]);}
     }
-    const role=profile.role||"";
     const admin=role==="admin", shift=role==="authorising_officer", manager=role==="management";
     const jobs:PromiseLike<any>[]=[];
     const add=(key:string,label:string,href:string,p:PromiseLike<any>)=>jobs.push(p.then(r=>({key,label,href,count:r.count??(r.data?.length||0),error:r.error})));
     if(admin||shift)add("stock-shift","Stock movements awaiting Shiftboss approval","/approvals",db.from("ems_stock_transactions").select("id",{count:"exact",head:true}).eq("status","pending_approval"));
     if(admin||manager)add("stock-manager","Stock movements awaiting Management approval","/approvals",db.from("ems_stock_transactions").select("id",{count:"exact",head:true}).eq("status","shiftboss_approved"));
     if(admin||shift)add("daily","Daily explosive requests","/approvals",db.from("ems_daily_orders").select("id",{count:"exact",head:true}).eq("status","submitted"));
-    if(admin||shift||manager)add("products","New products awaiting approval","/approvals",db.from("ems_explosive_products").select("id",{count:"exact",head:true}).eq("approval_status","pending_approval"));
+    if(admin||manager)add("products","New products awaiting approval","/approvals",db.from("ems_explosive_products").select("id",{count:"exact",head:true}).eq("approval_status","pending_approval"));
     if(admin||shift)add("supplier-shift","Supplier orders awaiting Shiftboss","/approvals",db.from("ems_purchase_orders").select("id",{count:"exact",head:true}).eq("status","pending_shift_boss"));
     if(admin||manager)add("supplier-manager","Supplier orders awaiting Management","/approvals",db.from("ems_purchase_orders").select("id",{count:"exact",head:true}).eq("status","pending_mine_overseer"));
     if(admin||manager)add("stocktakes","Stock counts awaiting verification","/approvals",db.from("ems_stocktakes").select("id",{count:"exact",head:true}).eq("status","pending_verification"));
